@@ -1,0 +1,912 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Sopla la Bola</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* Diseño: una sola columna calmada. Arriba el contador, en el centro el paisaje con la bola
+   y el animal misterioso que se aclara al soplar, abajo el estado del soplido. */
+:root{
+  --ink:#13353d;
+  --ink-soft:#4b6a70;
+  --mist:#e8f2f0;
+  --paper:#ffffff;
+  --line:#cfe1de;
+  --sea:#1d7f86;
+  --sea-deep:#145e64;
+  --sun:#f2b84b;
+  --leaf:#4f9d69;
+  --coral:#e56f56;
+  --hint:#dcebf3;
+  --hint-ink:#24566f;
+  --display:'Fredoka','Arial Rounded MT Bold','Trebuchet MS',ui-rounded,system-ui,sans-serif;
+  --body:'Nunito','Segoe UI',system-ui,-apple-system,sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--mist);color:var(--ink);
+  font-family:var(--body);font-size:18px;line-height:1.5;min-height:100vh;
+  padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(28px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));
+}
+button{font:inherit;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+button:disabled{cursor:default}
+:focus-visible{outline:4px solid var(--sun);outline-offset:3px}
+h1,h2,h3,p{margin:0}
+.app{max-width:760px;margin:0 auto;display:grid;gap:16px}
+
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:600;font-size:1.3rem}
+.brand svg{width:34px;height:34px;display:block}
+.tools{display:flex;gap:8px;flex-wrap:wrap}
+.ghost{display:inline-flex;align-items:center;gap:8px;background:transparent;border:2px solid var(--line);border-radius:14px;padding:6px 14px;min-height:44px;color:var(--ink-soft);font-weight:700}
+.ghost svg{width:20px;height:20px}
+
+.stage{
+  background:var(--paper);border:2px solid var(--line);border-radius:28px;
+  padding:clamp(16px,4vw,30px);display:grid;gap:14px;justify-items:center;align-content:start;text-align:center;
+}
+.q-row{display:flex;align-items:center;justify-content:center;gap:12px}
+.q{font-family:var(--display);font-weight:600;font-size:clamp(1.5rem,5vw,2.1rem);line-height:1.15;text-wrap:balance}
+.help{color:var(--ink-soft);font-size:1.05rem;max-width:34rem;text-wrap:balance}
+.say{flex:none;width:48px;height:48px;border-radius:50%;border:2px solid var(--line);background:var(--mist);color:var(--sea-deep);display:grid;place-items:center}
+.say svg{width:24px;height:24px}
+
+.hud{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;width:100%}
+.hud-n{font-family:var(--display);font-weight:600;font-size:1.25rem}
+.dots{display:flex;align-items:center;gap:6px}
+.dots i{width:26px;height:10px;border-radius:999px;background:var(--line)}
+.dots i.on{background:var(--sea)}
+.dots b{font-weight:800;font-size:.9rem;color:var(--ink-soft);margin-right:4px}
+
+.arena{position:relative;width:100%;aspect-ratio:16/10;border-radius:22px;overflow:hidden;border:2px solid var(--line);background:#dff1f2}
+.arena canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.mystery{
+  position:absolute;right:2.5%;top:5%;width:30%;aspect-ratio:1;border-radius:50%;overflow:hidden;
+  background:var(--hint);border:4px solid var(--paper);box-shadow:0 0 0 2px var(--line);display:grid;place-items:center;
+}
+.mystery .qm{font-family:var(--display);font-weight:600;font-size:clamp(2rem,9vw,3.6rem);color:#a9c9da;line-height:1}
+.mystery img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scale(1.25);filter:blur(22px);opacity:0}
+.mystery img.on{opacity:1}
+.mystery.won{box-shadow:0 0 0 4px var(--sun)}
+.mystery .tag{
+  position:absolute;left:0;right:0;bottom:0;background:rgba(19,53,61,.72);color:#fff;font-weight:800;
+  font-size:clamp(.7rem,2.6vw,.95rem);padding:2px 4px;line-height:1.2;text-wrap:balance
+}
+
+.blow-status{font-weight:800;color:var(--sea-deep);min-height:1.9rem;font-size:1.15rem;text-wrap:balance}
+.hold{
+  background:var(--mist);border:2px dashed var(--line);border-radius:16px;padding:10px 18px;min-height:52px;
+  color:var(--ink-soft);font-weight:700;touch-action:none;user-select:none;-webkit-user-select:none;
+}
+.hold.down{background:var(--hint);border-color:#a9c9da}
+.micbox{color:var(--ink-soft);font-size:1rem;max-width:34rem}
+
+.go{
+  background:var(--sea);color:#fff;border:0;border-radius:20px;min-height:64px;padding:12px 34px;
+  font-family:var(--display);font-size:1.5rem;font-weight:600;box-shadow:0 4px 0 var(--sea-deep);
+}
+.go:active{transform:translateY(2px);box-shadow:0 2px 0 var(--sea-deep)}
+.soft{background:var(--paper);color:var(--sea-deep);border:2px solid var(--sea);border-radius:16px;min-height:52px;padding:8px 20px;font-weight:800}
+.start-title{font-family:var(--display);font-weight:600;font-size:clamp(2.2rem,8vw,3.2rem);line-height:1.05}
+.note{max-width:34rem;text-align:left;font-size:.95rem;color:var(--ink-soft);background:var(--mist);border-radius:18px;padding:12px 16px}
+.note b{color:var(--ink)}
+.col{display:grid;gap:12px;justify-items:center}
+
+.sheet{position:fixed;inset:0;z-index:20;background:rgba(19,53,61,.6);overflow:auto;padding:max(16px,env(safe-area-inset-top)) 16px max(24px,env(safe-area-inset-bottom));display:grid;justify-items:center;align-items:start}
+.sheet-card{width:min(100%,560px);background:var(--paper);border-radius:28px;padding:clamp(16px,4vw,26px);display:grid;gap:14px;margin-block:auto;animation:rise .35s ease-out;min-width:0}
+.sheet-card.wide{width:min(100%,720px)}
+@keyframes rise{from{opacity:0;transform:translateY(14px) scale(.98)}to{opacity:1;transform:none}}
+.kicker{font-weight:800;color:var(--sea-deep);letter-spacing:.06em;text-transform:uppercase;font-size:.85rem}
+.card-name{font-family:var(--display);font-weight:600;font-size:clamp(2.2rem,8vw,3rem);line-height:1.05}
+.sci{font-style:italic;color:var(--ink-soft)}
+.where{display:inline-flex;gap:8px;align-items:center;background:var(--mist);border-radius:999px;padding:6px 14px;font-weight:800;width:fit-content;max-width:100%}
+.card-sub{font-family:var(--display);font-weight:500;font-size:1.3rem}
+.facts{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.facts li{position:relative;padding:12px 14px 12px 44px;border-radius:16px;background:var(--mist);font-size:1.18rem;line-height:1.4}
+.facts li::before{content:"";position:absolute;left:17px;top:1.05em;width:13px;height:13px;border-radius:50%;background:var(--sun)}
+.credit{font-size:.82rem;color:var(--ink-soft)}
+.credit a{color:var(--sea-deep)}
+.row-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.photo{position:relative;width:100%;aspect-ratio:4/3;border-radius:22px;overflow:hidden;background:var(--hint);display:grid;place-items:center}
+.photo .ph{font-family:var(--display);font-size:5rem;color:#a9c9da}
+.photo img,.th img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .4s}
+.photo.ok img,.th.ok img{opacity:1}
+.photo.ok .ph,.th.ok .ph{display:none}
+.th .ph{font-family:var(--display);font-size:1.8rem;color:#a9c9da}
+
+.album-title{font-family:var(--display);font-weight:600;font-size:1.6rem}
+.tier-h{font-family:var(--display);font-weight:500;font-size:1.1rem;color:var(--sea-deep);margin-top:6px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:10px}
+.tile{
+  border:2px solid var(--line);border-radius:18px;background:var(--mist);padding:8px 4px;
+  display:grid;gap:4px;justify-items:center;align-content:start;min-width:0;font-weight:800;font-size:.82rem;line-height:1.2;text-align:center;
+}
+button.tile:active{background:var(--hint)}
+.tile .th{width:64px;height:64px;border-radius:50%;overflow:hidden;position:relative;background:var(--hint);display:grid;place-items:center}
+.tile.locked-tile{color:var(--ink-soft);border-style:dashed;background:transparent}
+.tile.locked-tile .th{background:var(--mist);font-family:var(--display);font-size:2rem;color:var(--line)}
+.tile .nm{overflow-wrap:anywhere}
+
+.set-title{font-family:var(--display);font-weight:600;font-size:1.6rem}
+.set-group{display:grid;gap:4px}
+.set-group>h3{font-family:var(--display);font-weight:500;font-size:1.1rem;color:var(--sea-deep);margin-top:8px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.row label,.row .lbl{font-weight:700}
+.row small{display:block;color:var(--ink-soft);font-weight:400;font-size:.88rem;line-height:1.3}
+.seg{display:inline-flex;border:2px solid var(--line);border-radius:14px;overflow:hidden}
+.seg button{border:0;background:var(--paper);padding:8px 14px;min-height:44px;font-weight:800;color:var(--ink-soft)}
+.seg button[aria-pressed="true"]{background:var(--sea);color:#fff}
+input[type=range]{width:min(100%,220px);accent-color:var(--sea);height:32px}
+input[type=number]{width:84px;min-height:44px;border:2px solid var(--line);border-radius:12px;padding:6px 10px;font:inherit;font-weight:800;color:var(--ink);background:var(--paper)}
+input[type=checkbox][role=switch]{appearance:none;-webkit-appearance:none;width:52px;height:30px;border-radius:999px;background:var(--line);position:relative;flex:none;cursor:pointer;border:0;margin:0;transition:background .2s}
+input[type=checkbox][role=switch]::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:transform .2s}
+input[type=checkbox][role=switch]:checked{background:var(--sea)}
+input[type=checkbox][role=switch]:checked::after{transform:translateX(22px)}
+.chip{display:inline-block;border-radius:999px;padding:2px 12px;background:var(--mist);font-weight:800;color:var(--ink-soft);min-width:5.5rem;text-align:center}
+.chip.on{background:#e3f4e8;color:#1d5f38}
+.meter{width:100%;height:22px;border-radius:999px;background:var(--mist);border:2px solid var(--line);overflow:hidden}
+.meter i{display:block;height:100%;width:0;background:var(--sun);border-radius:999px}
+.danger{background:var(--paper);border:2px solid var(--coral);color:#a43d27;border-radius:14px;padding:8px 16px;min-height:44px;font-weight:800}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+body.calm *,body.calm *::before,body.calm *::after{animation:none!important;transition:none!important}
+@media (max-width:420px){
+  body{font-size:17px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="17" style="fill:var(--sun);stroke:var(--ink);stroke-width:2.5"/><rect x="3" y="15.5" width="34" height="9" style="fill:var(--coral)" clip-path="circle(17px at 20px 20px)"/><circle cx="26" cy="20" r="3" style="fill:var(--paper)"/></svg>
+      <span>Sopla la Bola</span>
+    </div>
+    <div class="tools">
+      <button class="ghost" id="openAlbum" type="button">Mis animales <span id="albumCount"></span></button>
+      <button class="ghost" id="openSettings" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2.4"/><circle cx="9" cy="17" r="2.4"/></svg>
+        Ajustes
+      </button>
+    </div>
+  </header>
+  <main class="stage" id="stage"></main>
+</div>
+<noscript>Este juego necesita JavaScript.</noscript>
+
+<script>
+(() => {
+'use strict';
+
+/* ---------- Datos: 50 animales, de 10 en 10 por nivel ---------- */
+const A = (id, name, sci, where, titles, facts) => ({ id, name, sci, where, titles, facts });
+const ANIMALS = [
+  // Nivel 1
+  A('ajolote','Ajolote','Ambystoma mexicanum','Lagos de México',['Ambystoma mexicanum','Ajolote'],['Es un anfibio y casi siempre vive dentro del agua.','Si pierde una pata, le vuelve a crecer una nueva.','Conserva sus branquias de bebé: parecen plumas rosas a los lados de la cabeza.']),
+  A('ornitorrinco','Ornitorrinco','Ornithorhynchus anatinus','Ríos de Australia',['Ornithorhynchus anatinus','Ornitorrinco'],['Es un mamífero, pero pone huevos.','Con su pico de pato detecta la electricidad de sus presas bajo el agua.','El macho tiene un espolón con veneno en cada pata trasera.']),
+  A('pangolin','Pangolín','Familia Manidae','África y Asia',['Pangolín','Manidae'],['Es el único mamífero cubierto de escamas.','Cuando tiene miedo se enrolla como una pelota.','No tiene dientes: come hormigas y termitas con su lengua larguísima.']),
+  A('okapi','Okapi','Okapia johnstoni','Selva del Congo',['Okapia johnstoni','Okapi'],['Parece una mezcla de cebra y jirafa, pero es pariente de la jirafa.','Su lengua mide más de 30 centímetros y con ella se limpia hasta las orejas.','Es muy tímido y se esconde en la selva.']),
+  A('narval','Narval','Monodon monoceros','Mares fríos del Ártico',['Monodon monoceros','Narval'],['Vive en el mar helado del Ártico.','Su colmillo largo y en espiral es en realidad un diente.','Puede medir hasta 3 metros, por eso lo llaman el unicornio del mar.']),
+  A('quokka','Quokka','Setonix brachyurus','Australia occidental',['Setonix brachyurus','Quokka'],['Parece que siempre sonríe, por eso es famoso.','Es un marsupial: su bebé crece en una bolsa de la mamá.','Vive sobre todo en la isla Rottnest, en Australia.']),
+  A('pezluna','Pez luna','Mola mola','Mares templados y tropicales',['Mola mola','Pez luna'],['Es el pez óseo más pesado del mundo: puede pesar más de dos toneladas.','Parece una cabeza gigante con aletas.','Le gusta tumbarse de lado cerca de la superficie para calentarse al sol, y come medusas.']),
+  A('perezoso','Perezoso','Bradypus variegatus','Selvas de América',['Bradypus variegatus','Perezoso'],['Se mueve tan despacio que a su pelo le crecen algas verdes.','Pasa casi toda la vida colgado de los árboles.','Aunque parezca torpe, nada muy bien.']),
+  A('tapir','Tapir','Tapirus terrestris','Selvas de Sudamérica',['Tapirus terrestris','Tapir'],['Su nariz es una trompa corta con la que agarra hojas y ramitas.','Las crías tienen rayas y manchas, como una sandía con patas.','Le encanta el agua y se zambulle para escapar del peligro.']),
+  A('piquero','Piquero de patas azules','Sula nebouxii','Costas del Pacífico de América',['Sula nebouxii','Piquero patiazul'],['Sus patas son de un azul muy brillante.','El macho las levanta y baila para presumir ante la hembra.','Pesca lanzándose al mar en picado desde el aire.']),
+  // Nivel 2
+  A('ayeaye','Aye-aye','Daubentonia madagascariensis','Madagascar',['Daubentonia madagascariensis','Aye-aye'],['Sale de noche y vive en los árboles de Madagascar.','Tiene un dedo larguísimo y fino para sacar bichitos de los troncos.','Golpea la madera y escucha con sus orejas enormes para encontrar larvas.']),
+  A('kakapo','Kakapo','Strigops habroptilus','Bosques de Nueva Zelanda',['Strigops habroptilus','Kakapo'],['Es un loro que no puede volar.','Es el loro más pesado del mundo y sale de noche.','Quedan muy pocos, así que mucha gente lo cuida en Nueva Zelanda.']),
+  A('saiga','Saiga','Saiga tatarica','Estepas de Asia central',['Saiga tatarica','Saiga'],['Es un antílope que corre en grandes grupos.','Su nariz grande y blanda calienta el aire frío antes de que llegue a sus pulmones.','Esa nariz también filtra el polvo del camino.']),
+  A('tarsero','Tarsero','Familia Tarsiidae','Selvas del sudeste de Asia',['Tarsiidae','Tarsero'],['Es un primate diminuto que cabe en la palma de una mano.','Cada uno de sus ojos es más grande que su cerebro.','Puede girar la cabeza casi hasta atrás, porque sus ojos no se mueven.']),
+  A('dragonmarino','Dragón marino foliáceo','Phycodurus eques','Costas del sur de Australia',['Phycodurus eques','Dragón marino foliáceo'],['Parece un trozo de alga flotando, así se esconde.','Es pariente del caballito de mar.','El papá lleva los huevitos pegados a su cola.']),
+  A('pezgota','Pez gota','Psychrolutes marcidus','Fondo del mar, cerca de Australia',['Psychrolutes marcidus','Pez gota'],['Vive en el fondo del mar, muy profundo.','Su cuerpo es blando como una gelatina.','Fuera del agua se aplasta y su cara parece triste, pero en el mar es normal.']),
+  A('numbat','Numbat','Myrmecobius fasciatus','Bosques del suroeste de Australia',['Myrmecobius fasciatus','Numbat'],['Tiene rayas claras en el lomo y una cola peluda.','Come casi solo termitas, miles cada día.','Es un marsupial que sale de día, algo raro en su familia.']),
+  A('fosa','Fosa','Cryptoprocta ferox','Madagascar',['Cryptoprocta ferox','Fosa'],['Es el mayor carnívoro de Madagascar.','Parece un gato, pero es pariente de las mangostas.','Trepa genial: sus tobillos giran y puede bajar de los árboles de cabeza.']),
+  A('kiwi','Kiwi','Apteryx','Bosques de Nueva Zelanda',['Apteryx','Kiwi (ave)'],['Es un ave que no puede volar y sale de noche.','Tiene los agujeros de la nariz en la punta del pico, para oler la comida bajo tierra.','Pone un huevo enorme comparado con su tamaño.']),
+  A('ranacristal','Rana de cristal','Familia Centrolenidae','Selvas de América Central y del Sur',['Centrolenidae','Rana de cristal'],['Su barriga es transparente: se le ven el corazón y las tripas.','Es pequeñita y verde, y vive entre las hojas.','En muchas especies, el papá vigila los huevos.']),
+  // Nivel 3
+  A('narigudo','Mono narigudo','Nasalis larvatus','Selvas de la isla de Borneo',['Nasalis larvatus','Mono narigudo'],['El macho tiene una nariz enorme que cuelga sobre la boca.','Es muy buen nadador y cruza ríos.','Tiene una barriga grande porque come muchas hojas.']),
+  A('dumbo','Pulpo Dumbo','Grimpoteuthis','Fondo del océano, muy profundo',['Grimpoteuthis','Pulpo dumbo'],['Tiene dos aletas en la cabeza que parecen las orejas del elefante Dumbo.','Vive en el fondo del mar, donde no llega la luz.','Nada moviendo esas aletas como si volara.']),
+  A('colugo','Colugo','Orden Dermoptera','Selvas del sudeste de Asia',['Dermoptera','Colugo'],['A veces lo llaman lémur volador, pero ni es lémur ni vuela.','Planea de árbol en árbol con una piel que une sus patas.','Puede recorrer muchos metros planeando de un solo salto.']),
+  A('lori','Loris perezoso','Nycticebus','Selvas del sur de Asia',['Nycticebus','Loris perezoso'],['Tiene unos ojos enormes para ver de noche.','Se mueve despacio y sin hacer ruido.','Es de los pocos mamíferos con mordedura venenosa.']),
+  A('secretario','Ave secretario','Sagittarius serpentarius','Sabanas de África',['Sagittarius serpentarius','Ave secretario'],['Tiene patas larguísimas y plumas en la cabeza.','Caza serpientes pisándolas con fuerza.','Camina muchos kilómetros al día por la sabana.']),
+  A('gavial','Gavial','Gavialis gangeticus','Ríos del norte de la India y Nepal',['Gavialis gangeticus','Gavial'],['Es un cocodrilo con el hocico larguísimo y finito.','Con ese hocico atrapa peces rápidos en el agua.','El macho tiene un bulto en la punta de la nariz que usa para hacer zumbidos.']),
+  A('hormiguero','Oso hormiguero gigante','Myrmecophaga tridactyla','Sabanas y selvas de Sudamérica',['Myrmecophaga tridactyla','Oso hormiguero gigante'],['No tiene dientes y come hormigas y termitas con su lengua larguísima.','Su cola es tan peluda que la usa como manta para dormir.','La cría viaja subida a la espalda de su mamá.']),
+  A('mantis','Mantis orquídea','Hymenopus coronatus','Selvas del sudeste de Asia',['Hymenopus coronatus','Mantis orquídea'],['Parece una flor rosa y blanca.','Se queda quieta entre las flores para que los insectos se acerquen.','Va cambiando de piel a medida que crece.']),
+  A('hercules','Escarabajo Hércules','Dynastes hercules','Selvas de América Central y del Sur',['Dynastes hercules','Escarabajo Hércules'],['Es uno de los escarabajos más grandes del mundo.','El macho tiene un cuerno largo con forma de pinza.','Puede cargar un peso muchísimo mayor que el suyo.']),
+  A('rape','Pez rape abisal','Orden Lophiiformes','Océanos profundos',['Lophiiformes','Pez rape'],['Lleva una lucecita colgando delante de la boca, como una linterna.','Vive en la oscuridad del fondo del mar.','La luz atrae a otros peces, que se acercan a su boca.']),
+  // Nivel 4
+  A('lira','Ave lira','Menura','Bosques de Australia',['Menura','Ave lira'],['La cola del macho tiene forma de lira, un instrumento de música.','Imita sonidos que oye, como el canto de otros pájaros.','El macho canta y baila para presumir.']),
+  A('matamata','Tortuga mata mata','Chelus fimbriata','Ríos del Amazonas y el Orinoco',['Chelus fimbriata','Mata mata'],['Parece una hoja seca o un trozo de madera.','Se queda quieta en el agua y abre la boca de golpe para atrapar peces.','Tiene el cuello largo y la cabeza plana y triangular.']),
+  A('hipopigmeo','Hipopótamo pigmeo','Choeropsis liberiensis','Bosques de África occidental',['Choeropsis liberiensis','Hipopótamo pigmeo'],['Es mucho más pequeño que el hipopótamo común.','Vive en bosques húmedos y pasa mucho tiempo cerca del agua.','Su piel suelta un líquido rosado que la protege del sol.']),
+  A('komodo','Dragón de Komodo','Varanus komodoensis','Islas de Indonesia',['Varanus komodoensis','Dragón de Komodo'],['Es el lagarto más grande del mundo.','Huele con la lengua, que tiene dos puntas.','Solo vive en unas pocas islas de Indonesia.']),
+  A('jerbo','Jerbo','Familia Dipodidae','Desiertos de África y Asia',['Dipodidae','Jerbo'],['Salta como un canguro pequeñito con sus patas traseras largas.','Tiene las orejas grandes y una cola larguísima.','Sale de noche, cuando hace menos calor.']),
+  A('fenec','Fénec','Vulpes zerda','Desierto del Sáhara',['Vulpes zerda','Fénec'],['Es el zorro más pequeño del mundo.','Sus orejas enormes oyen muy bien y le ayudan a soltar calor.','Vive en cuevas que excava en la arena.']),
+  A('nautilus','Nautilus','Nautilus pompilius','Mares cálidos del Pacífico',['Nautilus pompilius','Nautilus'],['Tiene una concha en espiral con muchas habitaciones.','Casi no ha cambiado desde hace millones de años.','Se mueve lanzando chorros de agua.']),
+  A('salamandra','Salamandra gigante china','Andrias davidianus','Ríos de China',['Andrias davidianus','Salamandra gigante china'],['Es el anfibio más grande del mundo.','Tiene la piel arrugada y ve muy poco.','Pasa toda la vida en ríos de agua fresca.']),
+  A('barrileye','Pez barrileye','Macropinna microstoma','Aguas profundas del Pacífico norte',['Macropinna microstoma','Pez barrileye'],['Su cabeza es transparente como una burbuja.','Sus ojos verdes están dentro de la cabeza y miran hacia arriba.','Vive muy hondo, donde casi no llega la luz.']),
+  A('binturong','Binturong','Arctictis binturong','Selvas del sudeste de Asia',['Arctictis binturong','Binturong'],['Huele a palomitas de maíz.','Su cola agarra las ramas como si fuera una mano.','Vive en los árboles y sale sobre todo de noche.']),
+  // Nivel 5
+  A('picozapato','Picozapato','Balaeniceps rex','Pantanos de África',['Balaeniceps rex','Picozapato'],['Su pico enorme parece un zapato de madera.','Puede quedarse quieto muchísimo tiempo esperando a un pez.','Para saludar golpea el pico y suena como una matraca.']),
+  A('tardigrado','Tardígrado','Phylum Tardigrada','Casi cualquier lugar, hasta en el musgo',['Tardigrada','Tardígrado'],['Mide menos de un milímetro y tiene ocho patitas.','Puede quedarse dormido sin agua durante años y despertarse.','Incluso ha sobrevivido en el espacio en un experimento.']),
+  A('gerenuc','Gerenuc','Litocranius walleri','Sabanas del este de África',['Litocranius walleri','Gerenuc'],['Es una gacela de cuello larguísimo, por eso la llaman gacela jirafa.','Se pone de pie sobre las patas traseras para comer hojas altas.','Casi no necesita beber: le basta con lo que come.']),
+  A('sifaka','Sifaka','Propithecus','Madagascar',['Propithecus','Sifaka'],['Es un lémur que salta de árbol en árbol.','En el suelo avanza dando saltitos de lado, como si bailara.','Vive solo en la isla de Madagascar.']),
+  A('calamarvampiro','Calamar vampiro','Vampyroteuthis infernalis','Mares muy profundos',['Vampyroteuthis infernalis','Calamar vampiro'],['Vive muy hondo, donde casi no hay luz ni oxígeno.','Si se asusta, suelta una nube de moco que brilla en la oscuridad.','Aunque se llame vampiro, se alimenta de restos pequeños que caen desde arriba.']),
+  A('quetzal','Quetzal','Pharomachrus mocinno','Bosques de Centroamérica',['Pharomachrus mocinno','Quetzal'],['Es un ave de plumas verdes que brillan.','El macho tiene unas plumas larguísimas en la cola.','Los mayas y los aztecas lo consideraban un ave sagrada.']),
+  A('nudibranquio','Nudibranquio','Orden Nudibranchia','Mares de todo el mundo',['Nudibranchia','Nudibranquio'],['Es una babosa de mar de colores muy vivos.','No tiene concha para protegerse.','Algunos guardan el veneno de lo que comen para defenderse.']),
+  A('paraiso','Ave del paraíso','Familia Paradisaeidae','Nueva Guinea y Australia',['Paradisaeidae','Ave del paraíso'],['Los machos tienen plumas de colores increíbles.','Hacen bailes muy raros para impresionar a las hembras.','Casi todas viven en la isla de Nueva Guinea.']),
+  A('dragonazul','Dragón azul','Glaucus atlanticus','Océanos cálidos',['Glaucus atlanticus','Dragón azul'],['Es una babosa de mar de unos tres centímetros.','Flota boca arriba en la superficie del agua.','Come medusas venenosas y guarda su veneno para defenderse.']),
+  A('ratatopo','Rata topo desnuda','Heterocephalus glaber','Subsuelo de África oriental',['Heterocephalus glaber','Rata topo desnuda'],['Vive bajo tierra, en grupos con una reina, como las abejas.','Casi no tiene pelo y sus dientes salen por fuera de los labios para excavar.','Vive muchos años para ser un animal tan pequeño.'])
+];
+const TOTAL = ANIMALS.length; // 50
+const PER_TIER = 10;
+
+/* ---------- Física de la bola (se prueba aparte con números) ---------- */
+/*PHYS-START*/
+const TIERS = [
+  { T: 2.5, hills: [] },
+  { T: 3.5, hills: [[0.028, 0.50, 0.25]] },
+  { T: 4.5, hills: [[0.040, 0.50, 0.20]] },
+  { T: 5.5, hills: [[0.040, 0.33, 0.13], [0.045, 0.68, 0.13]] },
+  { T: 6.5, hills: [[0.045, 0.25, 0.10], [0.050, 0.50, 0.11], [0.050, 0.75, 0.10]] }
+];
+const SLOPE_STAY = 0.10;
+function terrainH(x, hills) {
+  let y = 0;
+  for (const [a, c, w] of hills) { const u = (x - c) / w; y += a * Math.exp(-u * u); }
+  return y;
+}
+function terrainS(x, hills) {
+  let s = 0;
+  for (const [a, c, w] of hills) { const u = (x - c) / w; s += a * (-2 * u / w) * Math.exp(-u * u); }
+  return s;
+}
+function makeParams(tier, factor) {
+  const T = TIERS[tier].T * factor;
+  const D = 4, Aa = D / T;
+  return { hills: TIERS[tier].hills, D, A: Aa, G: 1.2 * Aa };
+}
+function stepBall(s, P, blowing, level, dt) {
+  const sl = terrainS(s.x, P.hills);
+  let acc = 0;
+  if (blowing) acc += P.A * (0.85 + 0.15 * level);
+  const se = blowing ? sl : Math.sign(sl) * Math.max(0, Math.abs(sl) - SLOPE_STAY);
+  acc -= P.G * se;
+  acc -= P.D * s.v;
+  s.v += acc * dt;
+  if (s.v > 1.5) s.v = 1.5;
+  if (s.v < -0.6) s.v = -0.6;
+  s.x += s.v * dt;
+  if (s.x < 0) { s.x = 0; if (s.v < 0) s.v = 0; }
+}
+/*PHYS-END*/
+
+/* ---------- Utilidades ---------- */
+const $ = (s, el = document) => el.querySelector(s);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function h(tag, attrs, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v === false || v == null) continue;
+    if (k === 'class') e.className = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else if (v === true) e.setAttribute(k, '');
+    else e.setAttribute(k, v);
+  }
+  for (const k of kids.flat(Infinity)) {
+    if (k == null || k === false) continue;
+    e.append(k.nodeType ? k : document.createTextNode(String(k)));
+  }
+  return e;
+}
+const LS = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+};
+
+/* ---------- Ajustes y progreso ---------- */
+const DEF = { sens: 6, dur: 1, voiceFilter: true, sounds: true, speech: true, calm: false };
+let S = Object.assign({}, DEF, LS.get('slb.settings', {}));
+let N = clamp(LS.get('slb.n', 0), 0, TOTAL);        // animal actual (0 a 50)
+let DONE = clamp(LS.get('slb.done', 0), 0, TOTAL);  // animales ya desbloqueados (álbum)
+const saveS = () => { LS.set('slb.settings', S); document.body.classList.toggle('calm', !!S.calm); };
+const saveP = () => { LS.set('slb.n', N); LS.set('slb.done', DONE); };
+
+/* ---------- Sonido suave ---------- */
+let actx = null;
+function ac() {
+  if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
+  return actx;
+}
+function chime(kind) {
+  if (!S.sounds) return;
+  const c = ac(); if (!c) return;
+  try { if (c.state === 'suspended') c.resume(); } catch (e) {}
+  const notes = kind === 'win' ? [523.25, 659.25, 783.99] : [587.33, 740];
+  const now = c.currentTime;
+  notes.forEach((f, i) => {
+    const o = c.createOscillator(), g = c.createGain(), t = now + i * 0.12;
+    o.type = 'sine'; o.frequency.value = f;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(0.06, t + 0.03);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.55);
+    o.connect(g); g.connect(c.destination);
+    o.start(t); o.stop(t + 0.6);
+  });
+}
+
+/* ---------- Voz (solo al pulsar un botón) ---------- */
+function speak(text) {
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'es-ES'; u.rate = 0.9;
+    const v = speechSynthesis.getVoices().find(x => /^es/i.test(x.lang));
+    if (v) u.voice = v;
+    speechSynthesis.speak(u);
+  } catch (e) {}
+}
+const SPEAKER = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6h4l5 4V5L7 9H3z" fill="currentColor"/><path d="M16 8.5a5 5 0 010 7M18.5 6a8.5 8.5 0 010 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+function speakBtn(text, label) {
+  if (!S.speech || !('speechSynthesis' in window)) return null;
+  const b = h('button', { class: 'say', type: 'button', 'aria-label': label || 'Escuchar', onclick: () => speak(text) });
+  b.innerHTML = SPEAKER;
+  return b;
+}
+
+/* ---------- Micrófono y detección de soplido ---------- */
+const Mic = {
+  state: 'idle', err: '',
+  async start() {
+    if (this.state === 'on') return true;
+    this.err = '';
+    const c0 = ac();
+    try { if (c0 && c0.state === 'suspended') c0.resume(); } catch (e0) {}
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { this.state = window.isSecureContext === false ? 'insecure' : 'unavailable'; return false; }
+    try {
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+      } catch (e1) {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      }
+      const c = ac();
+      if (!c) { this.state = 'unavailable'; return false; }
+      if (c.state === 'suspended') { try { await c.resume(); } catch (e) {} }
+      const src = c.createMediaStreamSource(stream);
+      const an = c.createAnalyser();
+      an.fftSize = 2048; an.smoothingTimeConstant = 0.2;
+      src.connect(an);
+      this.stream = stream; this.an = an;
+      this.td = new Float32Array(an.fftSize);
+      this.fd = new Float32Array(an.frequencyBinCount);
+      this.binHz = c.sampleRate / an.fftSize;
+      this.state = 'on';
+      return true;
+    } catch (e) {
+      const n = (e && e.name) || 'Error';
+      this.err = n;
+      let perm = '';
+      try { perm = (await navigator.permissions.query({ name: 'microphone' })).state; } catch (e2) {}
+      let framed = false;
+      try { framed = window.self !== window.top; } catch (e3) { framed = true; }
+      if (window.isSecureContext === false) this.state = 'insecure';
+      else if (n === 'NotReadableError' || n === 'AbortError') this.state = 'busy';
+      else if (n === 'NotFoundError' || n === 'DevicesNotFoundError') this.state = 'nomic';
+      else if (perm === 'granted' || (perm !== 'denied' && framed)) this.state = 'blocked';
+      else if (n === 'NotAllowedError' || n === 'SecurityError' || n === 'PermissionDeniedError') this.state = 'denied';
+      else this.state = 'unavailable';
+      return false;
+    }
+  }
+};
+const MIC_MSG = {
+  idle: 'El micrófono aún no está activado.',
+  on: 'Micrófono activo.',
+  denied: 'El navegador tiene el micrófono bloqueado para esta página. Toca el candado junto a la dirección, permite el micrófono y pulsa «Probar de nuevo».',
+  blocked: 'El micrófono tiene permiso, pero la página no puede usarlo desde aquí. Ábrela directamente en Chrome o Safari.',
+  insecure: 'Este navegador solo deja usar el micrófono en direcciones https.',
+  busy: 'Otra aplicación está usando el micrófono. Ciérrala y prueba de nuevo.',
+  nomic: 'No se encuentra ningún micrófono en este dispositivo.',
+  unavailable: 'Este navegador no permite usar el micrófono aquí.'
+};
+function micMessage() { return MIC_MSG[Mic.state] + (Mic.err && Mic.state !== 'on' ? ' (Detalle técnico: ' + Mic.err + ')' : ''); }
+
+const Det = {
+  base: 0.004, level: 0, on: 0, off: 0, blowing: false,
+  update(dt) {
+    if (Mic.state !== 'on') { this.blowing = false; this.level = 0; return { blowing: false, level: 0 }; }
+    Mic.an.getFloatTimeDomainData(Mic.td);
+    let s = 0; for (let i = 0; i < Mic.td.length; i++) s += Mic.td[i] * Mic.td[i];
+    const rms = Math.sqrt(s / Mic.td.length);
+    Mic.an.getFloatFrequencyData(Mic.fd);
+    const lo = Math.max(1, Math.floor(100 / Mic.binHz)), hi = Math.min(Mic.fd.length - 1, Math.floor(4000 / Mic.binHz));
+    let sl = 0, sp = 0, n = 0;
+    for (let i = lo; i <= hi; i++) { const p = Math.pow(10, Math.max(Mic.fd[i], -120) / 10); sl += Math.log(p); sp += p; n++; }
+    const flat = n ? Math.exp(sl / n) / (sp / n) : 0;
+    const T = 9 - S.sens * 0.7, floor = 0.04 - S.sens * 0.0033;
+    const thr = Math.max(floor, this.base * T);
+    const cand = rms > thr && (!S.voiceFilter || flat > 0.05);
+    if (cand) { this.on += dt; this.off = 0; }
+    else { this.off += dt; this.on = 0; if (rms < thr) this.base = clamp(this.base * (1 - dt * 1.5) + rms * dt * 1.5, 0.002, 0.05); }
+    if (!this.blowing && this.on > 0.08) this.blowing = true;
+    if (this.blowing && this.off > 0.3) this.blowing = false;
+    const target = clamp(rms / (thr * 2.5), 0, 1);
+    this.level += (target - this.level) * Math.min(1, dt * 12);
+    return { blowing: this.blowing, level: this.level };
+  }
+};
+
+/* ---------- Fotos de Wikipedia (cola de 4 peticiones, plan B sin internet) ---------- */
+const photoQueue = []; let photoActive = 0;
+function pumpPhotos() {
+  while (photoActive < 4 && photoQueue.length) {
+    const { a, res } = photoQueue.shift(); photoActive++;
+    lookupPhoto(a).then(res).finally(() => { photoActive--; pumpPhotos(); });
+  }
+}
+async function lookupPhoto(a) {
+  for (const t of a.titles) {
+    for (const lang of ['es', 'en']) {
+      try {
+        const r = await fetch('https://' + lang + '.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(t));
+        if (!r.ok) continue;
+        const j = await r.json();
+        if (j.type === 'disambiguation') continue;
+        const th = j.thumbnail && j.thumbnail.source;
+        if (th) return { thumb: th, big: th.replace(/\/\d+px-/, '/640px-'), page: (j.content_urls && j.content_urls.desktop && j.content_urls.desktop.page) || '' };
+      } catch (e) {}
+    }
+  }
+  return null;
+}
+function fetchPhoto(a) {
+  if (a._p) return a._p;
+  a._p = new Promise(res => { photoQueue.push({ a, res }); pumpPhotos(); }).then(v => { if (!v) a._p = null; return v; });
+  return a._p;
+}
+function photoInto(wrap, a, useThumb) {
+  wrap.append(h('span', { class: 'ph', 'aria-hidden': 'true' }, a.name[0]));
+  fetchPhoto(a).then(info => {
+    if (!info) return;
+    const img = h('img', { alt: a.name, loading: 'lazy', referrerpolicy: 'no-referrer' });
+    img.addEventListener('load', () => wrap.classList.add('ok'));
+    img.addEventListener('error', () => { if (img.src !== info.thumb) img.src = info.thumb; });
+    img.src = useThumb ? info.thumb : info.big;
+    wrap.append(img);
+  });
+}
+
+/* ---------- Pantallas ---------- */
+const stage = $('#stage');
+let G = null;          // estado del nivel que se está jugando
+let holding = false;
+let sheetEl = null, sheetCb = null, lastFocus = null, settingsUI = null;
+
+function tierOf(i) { return Math.min(TIERS.length - 1, Math.floor(i / PER_TIER)); }
+function updateAlbumCount() { $('#albumCount').textContent = DONE + '/' + TOTAL; }
+
+function renderStart() {
+  G = null;
+  stage.replaceChildren(
+    h('div', { class: 'col' },
+      h('h1', { class: 'start-title' }, 'Sopla la Bola'),
+      h('p', { class: 'help' }, 'Coge mucho aire y sopla sin parar para que la bola ruede hasta el hoyo. Detrás del hoyo se esconde un animal muy raro.')
+    ),
+    h('button', { class: 'go', type: 'button', onclick: async () => { ac(); await Mic.start(); if (N >= TOTAL) renderFinish(); else renderLevel(); } }, N > 0 && N < TOTAL ? 'Seguir con el animal ' + (N + 1) : 'Empezar'),
+    h('p', { class: 'note' },
+      h('b', null, 'Para papá o mamá: '),
+      'al empezar, el navegador pedirá permiso para usar el micrófono. El sonido solo se analiza al momento para notar el soplido: no se graba ni se envía a ningún sitio. Si el micrófono no funciona, hay un botón de mantener pulsado. Son 50 animales en 5 niveles; cada 10 animales los soplidos duran un poco más.')
+  );
+}
+
+function renderFinish() {
+  G = null;
+  stage.replaceChildren(
+    h('h1', { class: 'start-title' }, '¡Los 50 animales!'),
+    h('p', { class: 'help' }, 'Has descubierto todos. Puedes ver tus animales y repasar sus fichas cuando quieras.'),
+    h('div', { class: 'row-actions' },
+      h('button', { class: 'go', type: 'button', onclick: openAlbum }, 'Ver mis animales'),
+      h('button', { class: 'soft', type: 'button', onclick: () => { N = 0; saveP(); renderLevel(); } }, 'Jugar otra vez desde el principio')
+    )
+  );
+}
+
+function renderLevel() {
+  const a = ANIMALS[N], tier = tierOf(N);
+  const P = makeParams(tier, S.dur);
+
+  const dots = h('div', { class: 'dots', 'aria-label': 'Nivel ' + (tier + 1) + ' de ' + TIERS.length }, h('b', null, 'Nivel ' + (tier + 1)), TIERS.map((_, i) => h('i', { class: i <= tier ? 'on' : '' })));
+  const hud = h('div', { class: 'hud' }, h('span', { class: 'hud-n' }, 'Animal ' + (N + 1) + ' de ' + TOTAL), dots);
+
+  const img = h('img', { alt: '', referrerpolicy: 'no-referrer' });
+  const qm = h('span', { class: 'qm', 'aria-hidden': 'true' }, '?');
+  const tag = h('span', { class: 'tag', hidden: true }, a.name);
+  const mystery = h('div', { class: 'mystery', role: 'img', 'aria-label': 'Animal misterioso' }, qm, img, tag);
+  const cv = h('canvas', { 'aria-label': 'Una bola rueda por el campo hacia un hoyo' });
+  const arena = h('div', { class: 'arena' }, cv, mystery);
+  const status = h('p', { class: 'blow-status', role: 'status', 'aria-live': 'polite' });
+  const micBox = h('div', { class: 'micbox' });
+
+  const holdBtn = h('button', { class: 'hold', type: 'button' }, 'Sin micrófono: mantén pulsado aquí');
+  const down = e => { e.preventDefault(); holding = true; holdBtn.classList.add('down'); };
+  const up = () => { holding = false; holdBtn.classList.remove('down'); };
+  holdBtn.addEventListener('pointerdown', down);
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => holdBtn.addEventListener(ev, up));
+  holdBtn.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); down(e); } });
+  holdBtn.addEventListener('keyup', up);
+
+  const drawMic = () => {
+    micBox.replaceChildren();
+    if (Mic.state === 'on') return;
+    micBox.append(micMessage() + ' ', h('button', { class: 'soft', type: 'button', onclick: async () => { micBox.textContent = 'Probando el micrófono…'; await Mic.start(); drawMic(); } }, 'Probar de nuevo'));
+  };
+  drawMic();
+
+  stage.replaceChildren(
+    h('div', { class: 'q-row' }, h('h1', { class: 'q' }, 'Sopla largo y sin parar'), speakBtn('Coge mucho aire y sopla sin parar, hasta que la bola caiga en el hoyo.', 'Escuchar')),
+    hud, arena, status, micBox, holdBtn
+  );
+
+  G = {
+    a, tier, P, cv, ctx: cv.getContext('2d'), mystery, img, qm, tag, status,
+    s: { x: 0, v: 0 }, rot: 0, maxX: 0, phase: 'ready', t: 0, idle: 0, dropT: 0, dropFrom: null,
+    sparks: [], lastMsg: '', w: 0, h: 0, lastBlur: -1, winAt: 0
+  };
+  setStatus('Coge mucho aire y sopla sin parar.');
+  fetchPhoto(a).then(info => {
+    if (!info || !G || G.a !== a) return;
+    img.addEventListener('load', () => { img.classList.add('on'); qm.hidden = true; });
+    img.addEventListener('error', () => { if (img.src !== info.thumb) img.src = info.thumb; });
+    img.src = info.big;
+  });
+  // Mientras se juega, se descargan las fotos del siguiente animal.
+  if (N + 1 < TOTAL) fetchPhoto(ANIMALS[N + 1]);
+  window.scrollTo({ top: 0 });
+  sizeCanvas();
+}
+
+function setStatus(msg) {
+  if (!G || G.lastMsg === msg) return;
+  G.lastMsg = msg; G.status.textContent = msg;
+}
+
+/* ---------- Dibujo del paisaje ---------- */
+function sizeCanvas() {
+  if (!G) return;
+  const r = G.cv.getBoundingClientRect();
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  G.w = Math.max(200, r.width); G.h = Math.max(120, r.height);
+  G.cv.width = Math.round(G.w * dpr); G.cv.height = Math.round(G.h * dpr);
+  G.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  G.r = Math.max(13, G.w * 0.04);
+  G.x0 = G.w * 0.1; G.x1 = G.w * 0.8;
+  G.yBase = G.h * 0.8; G.E = 2.2;
+}
+window.addEventListener('resize', sizeCanvas);
+
+const gx = xn => G.x0 + xn * (G.x1 - G.x0);
+const gy = xn => G.yBase - terrainH(clamp(xn, 0, 1), G.P.hills) * G.w * G.E;
+function ballPos(xn) {
+  const px = gx(xn), py = gy(xn);
+  const m = -terrainS(clamp(xn, 0, 1), G.P.hills) * G.w * G.E / (G.x1 - G.x0);
+  const k = Math.sqrt(1 + m * m);
+  return { x: px + G.r * m / k, y: py - G.r / k };
+}
+
+function draw() {
+  const { ctx, w, h: H, r } = G;
+  // cielo
+  const sky = ctx.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, '#cfe9ee'); sky.addColorStop(1, '#eef8f4');
+  ctx.fillStyle = sky; ctx.fillRect(0, 0, w, H);
+  // nubes
+  ctx.fillStyle = 'rgba(255,255,255,.85)';
+  [[0.16, 0.2, 0.09], [0.46, 0.13, 0.07], [0.34, 0.33, 0.06]].forEach(([cx, cy, s]) => {
+    const R = w * s;
+    ctx.beginPath(); ctx.arc(w * cx, H * cy, R * 0.55, 0, 7); ctx.arc(w * cx + R * 0.6, H * cy + R * 0.1, R * 0.45, 0, 7); ctx.arc(w * cx - R * 0.6, H * cy + R * 0.12, R * 0.4, 0, 7); ctx.fill();
+  });
+  // suelo
+  const pitL = G.x1 - r * 0.2, pitR = pitL + r * 2.4, yG1 = gy(1), pitBot = yG1 + r * 2.7;
+  ctx.beginPath(); ctx.moveTo(0, H);
+  for (let px = 0; px <= w + 4; px += 4) ctx.lineTo(px, gy((px - G.x0) / (G.x1 - G.x0)));
+  ctx.lineTo(w, H); ctx.closePath();
+  ctx.fillStyle = '#b79a72'; ctx.fill();
+  ctx.beginPath();
+  for (let px = 0; px <= w + 4; px += 4) { const y = gy((px - G.x0) / (G.x1 - G.x0)); px === 0 ? ctx.moveTo(px, y) : ctx.lineTo(px, y); }
+  ctx.lineWidth = 8; ctx.lineJoin = 'round'; ctx.strokeStyle = '#4f9d69'; ctx.stroke();
+  // salida
+  ctx.fillStyle = 'rgba(19,53,61,.18)'; ctx.fillRect(G.x0 - r * 1.6, gy(0) - 3, r * 0.5, 6);
+  // hoyo
+  ctx.fillStyle = '#3a2f28'; ctx.fillRect(pitL, yG1 - 4, pitR - pitL, pitBot - yG1 + 4);
+  ctx.fillStyle = '#4f9d69'; ctx.fillRect(pitL - 4, yG1 - 4, 6, 8); ctx.fillRect(pitR - 2, yG1 - 4, 6, 8);
+  // bandera
+  const fx = pitR + r * 1.2;
+  ctx.strokeStyle = '#13353d'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(fx, yG1); ctx.lineTo(fx, yG1 - r * 3.2); ctx.stroke();
+  ctx.fillStyle = '#e56f56'; ctx.beginPath(); ctx.moveTo(fx, yG1 - r * 3.2); ctx.lineTo(fx + r * 1.5, yG1 - r * 2.7); ctx.lineTo(fx, yG1 - r * 2.2); ctx.closePath(); ctx.fill();
+
+  // bola
+  let bx, by;
+  const sN = G.s.x;
+  if (G.phase === 'drop' || G.phase === 'won') {
+    const f = G.dropFrom, tt = G.dropT, D = 0.75;
+    const u = clamp(tt / D, 0, 1);
+    const cxEnd = pitL + (pitR - pitL) / 2, cyEnd = pitBot - r;
+    bx = f.x + (cxEnd - f.x) * (1 - Math.pow(1 - clamp(tt / 0.45, 0, 1), 2));
+    by = f.y + (cyEnd - f.y) * (u * u);
+    if (G.phase === 'won') { bx = cxEnd; by = cyEnd; }
+  } else { const p = ballPos(sN); bx = p.x; by = p.y; }
+
+  // viento
+  if (G.phase === 'rolling' && G.blowing) {
+    ctx.strokeStyle = 'rgba(29,127,134,.55)'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+    for (let i = 0; i < 4; i++) {
+      const yy = by + (i - 1.5) * r * 0.55, off = ((G.t * 260 + i * 38) % 70);
+      const xe = bx - r * 1.5 - 60 + off, len = 18 + 10 * G.level;
+      ctx.globalAlpha = 1 - off / 90;
+      ctx.beginPath(); ctx.moveTo(xe - len, yy); ctx.lineTo(xe, yy); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+  // sombra y bola
+  if (G.phase !== 'drop' && G.phase !== 'won') { ctx.fillStyle = 'rgba(19,53,61,.18)'; ctx.beginPath(); ctx.ellipse(bx, by + r * 0.95, r * 0.9, r * 0.22, 0, 0, 7); ctx.fill(); }
+  ctx.save(); ctx.translate(bx, by); ctx.rotate(G.rot);
+  ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.clip();
+  ctx.fillStyle = '#f2b84b'; ctx.fillRect(-r, -r, r * 2, r * 2);
+  ctx.fillStyle = '#e56f56'; ctx.fillRect(-r, -r * 0.3, r * 2, r * 0.6);
+  ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(r * 0.5, -r * 0.6, r * 0.2, 0, 7); ctx.arc(-r * 0.5, r * 0.6, r * 0.2, 0, 7); ctx.fill();
+  ctx.restore();
+  ctx.lineWidth = 2.5; ctx.strokeStyle = '#13353d'; ctx.beginPath(); ctx.arc(bx, by, r, 0, 7); ctx.stroke();
+
+  // destellos
+  for (const p of G.sparks) {
+    ctx.globalAlpha = clamp(p.life, 0, 1); ctx.fillStyle = p.c;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.s, 0, 7); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+/* ---------- Bucle del juego ---------- */
+function update(dt, det) {
+  G.t += dt;
+  const active = det.blowing || holding;
+  G.blowing = active; G.level = holding ? 0.8 : det.level;
+
+  if (G.phase === 'ready' || G.phase === 'rolling') {
+    const px0 = gx(G.s.x);
+    stepBall(G.s, G.P, active, G.level, dt);
+    G.rot += (gx(G.s.x) - px0) / G.r;
+    if (active && G.phase === 'ready') G.phase = 'rolling';
+    G.maxX = Math.max(G.maxX, G.s.x);
+    G.idle = active ? 0 : G.idle + dt;
+    if (active) setStatus('¡Sigue soplando!');
+    else if (G.maxX > 0.02) setStatus(G.idle > 10 ? 'Acerca la boca al micrófono y sopla fuerte y largo.' : 'Puedes descansar. Coge aire y sigue.');
+    else setStatus(G.idle > 10 ? 'Acerca la boca al micrófono y sopla fuerte y largo.' : 'Coge mucho aire y sopla sin parar.');
+    if (G.s.x >= 1) {
+      G.phase = 'drop'; G.dropT = 0; G.dropFrom = ballPos(1);
+      G.mystery.style.transition = 'none';
+      setStatus('¡Dentro!');
+    }
+  } else if (G.phase === 'drop') {
+    G.dropT += dt;
+    if (G.dropT >= 0.75) { G.phase = 'won'; G.winAt = G.t; onLanded(); }
+  }
+
+  for (const p of G.sparks) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 520 * dt; p.life -= dt * 0.9; }
+  G.sparks = G.sparks.filter(p => p.life > 0);
+
+  // el animal se aclara a medida que la bola avanza
+  const prog = G.phase === 'drop' || G.phase === 'won' ? 1 : clamp(G.maxX, 0, 1);
+  const blur = prog >= 1 ? 0 : Math.round(Math.pow(1 - prog, 1.4) * 22 * 2) / 2;
+  if (blur !== G.lastBlur) { G.lastBlur = blur; G.img.style.filter = 'blur(' + blur + 'px)'; }
+}
+
+function onLanded() {
+  chime('win');
+  G.mystery.classList.add('won');
+  G.tag.hidden = false;
+  if (!S.calm) {
+    const cx = G.x1 + G.r * 1.2, cy = gy(1);
+    const cols = ['#f2b84b', '#e56f56', '#4f9d69', '#1d7f86', '#ffffff'];
+    for (let i = 0; i < 26; i++) {
+      const ang = -Math.PI / 2 + (Math.random() - 0.5) * 1.8, sp = 180 + Math.random() * 200;
+      G.sparks.push({ x: cx, y: cy, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, s: 3 + Math.random() * 3, c: cols[i % cols.length], life: 1.4 });
+    }
+  }
+  const idx = N, a = G.a;
+  const isNew = idx >= DONE;
+  if (isNew) DONE = idx + 1;
+  N = idx + 1; saveP(); updateAlbumCount();
+  setStatus('¡Lo conseguiste! Es el ' + a.name + '.');
+  setTimeout(() => {
+    if (!G || G.a !== a) return;
+    openSheet(cardNode(a, isNew ? 'new' : 'again'), () => { if (N >= TOTAL) renderFinish(); else renderLevel(); });
+  }, S.calm ? 900 : 1500);
+}
+
+let last = 0;
+function loop(ts) {
+  const dt = Math.min(0.1, last ? (ts - last) / 1000 : 0.016);
+  last = ts;
+  const det = Det.update(dt);
+  if (settingsUI) {
+    settingsUI.meterFill.style.width = Math.round(det.level * 100) + '%';
+    settingsUI.chip.textContent = Mic.state === 'on' ? (det.blowing ? 'Soplando' : 'Silencio') : '—';
+    settingsUI.chip.classList.toggle('on', !!det.blowing);
+  }
+  if (G && G.w) {
+    if (!sheetEl || G.phase === 'won') { try { update(dt, sheetEl ? { blowing: false, level: 0 } : det); } catch (e) { console.error(e); } }
+    try { draw(); } catch (e) { console.error(e); }
+  }
+  requestAnimationFrame(loop);
+}
+window.addEventListener('keydown', e => {
+  if (G && !sheetEl && e.code === 'Space' && !(e.target && e.target.closest && e.target.closest('button,input'))) { e.preventDefault(); holding = true; }
+});
+window.addEventListener('keyup', e => { if (e.code === 'Space') holding = false; });
+window.addEventListener('pagehide', () => { try { Mic.stream && Mic.stream.getTracks().forEach(t => t.stop()); } catch (e) {} });
+
+/* ---------- Ficha de animal ---------- */
+function cardNode(a, mode) {
+  const photo = h('div', { class: 'photo' });
+  photoInto(photo, a, false);
+  const credit = h('p', { class: 'credit' }, 'Foto: Wikipedia, con licencia libre.');
+  fetchPhoto(a).then(i => { if (i && i.page) credit.append(' ', h('a', { href: i.page, target: '_blank', rel: 'noopener' }, 'Ver en Wikipedia')); });
+  const readAll = a.name + '. Vive en: ' + a.where + '. ' + a.facts.join(' ');
+  const kicker = mode === 'new' ? '¡Animal nuevo!' : mode === 'again' ? 'Otra vez este animal' : 'Ficha del animal';
+  return h('div', { class: 'sheet-card' },
+    h('p', { class: 'kicker' }, kicker),
+    photo,
+    h('div', null, h('h2', { class: 'card-name' }, a.name), h('p', { class: 'sci' }, a.sci)),
+    h('p', { class: 'where' }, 'Vive en: ' + a.where),
+    h('h3', { class: 'card-sub' }, '¿Sabías que…?'),
+    h('ul', { class: 'facts' }, a.facts.map(f => h('li', null, f))),
+    S.speech && 'speechSynthesis' in window ? h('div', { class: 'row-actions' }, h('button', { class: 'soft', type: 'button', onclick: () => speak(readAll) }, 'Escuchar la ficha')) : null,
+    credit,
+    h('div', { class: 'row-actions' }, h('button', { class: 'go', type: 'button', 'data-close': '1' }, mode ? 'Siguiente animal' : 'Cerrar'))
+  );
+}
+
+/* ---------- Ventanas ---------- */
+function openSheet(node, onClose) {
+  closeSheet(true);
+  lastFocus = document.activeElement;
+  holding = false;
+  sheetCb = onClose || null;
+  sheetEl = h('div', { class: 'sheet', role: 'dialog', 'aria-modal': 'true' }, node);
+  sheetEl.addEventListener('click', e => { if (e.target.closest('[data-close]')) closeSheet(); });
+  document.body.append(sheetEl);
+  document.body.style.overflow = 'hidden';
+  const f = sheetEl.querySelector('[data-close]'); if (f) f.focus({ preventScroll: true });
+  sheetEl.scrollTop = 0;
+}
+function closeSheet(silent) {
+  if (!sheetEl) return;
+  sheetEl.remove(); sheetEl = null; settingsUI = null;
+  document.body.style.overflow = '';
+  try { speechSynthesis.cancel(); } catch (e) {}
+  const cb = sheetCb; sheetCb = null;
+  if (lastFocus && lastFocus.focus && document.contains(lastFocus)) lastFocus.focus({ preventScroll: true });
+  if (!silent && cb) cb();
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && sheetEl) closeSheet(); });
+
+/* ---------- Álbum ---------- */
+function openAlbum() {
+  const parts = [h('h2', { class: 'album-title' }, 'Mis animales: ' + DONE + ' de ' + TOTAL)];
+  for (let t = 0; t < TIERS.length; t++) {
+    parts.push(h('h3', { class: 'tier-h' }, 'Nivel ' + (t + 1)));
+    const tiles = [];
+    for (let i = t * PER_TIER; i < (t + 1) * PER_TIER; i++) {
+      const a = ANIMALS[i];
+      if (i >= DONE) {
+        tiles.push(h('div', { class: 'tile locked-tile', 'aria-label': 'Animal ' + (i + 1) + ' por descubrir' }, h('div', { class: 'th' }, '?'), h('span', { class: 'nm' }, String(i + 1))));
+      } else {
+        const th = h('div', { class: 'th' });
+        photoInto(th, a, true);
+        tiles.push(h('button', { class: 'tile', type: 'button', onclick: () => openSheet(cardNode(a, null)) }, th, h('span', { class: 'nm' }, a.name)));
+      }
+    }
+    parts.push(h('div', { class: 'tiles' }, tiles));
+  }
+  parts.push(h('div', { class: 'row-actions' }, h('button', { class: 'go', type: 'button', 'data-close': '1' }, 'Cerrar')));
+  openSheet(h('div', { class: 'sheet-card wide' }, parts), null);
+}
+
+/* ---------- Ajustes para adultos ---------- */
+function openSettings() {
+  const meterFill = h('i');
+  const meter = h('div', { class: 'meter', 'aria-hidden': 'true' }, meterFill);
+  const chip = h('span', { class: 'chip' }, '—');
+  const micMsg = h('p', { class: 'help', style: 'text-align:left;max-width:none' });
+  const micText = () => { micMsg.textContent = Mic.state === 'on' ? 'Micrófono activo. Sopla ahora para probar la sensibilidad.' : micMessage(); };
+  micText();
+
+  const seg = (key, items) => {
+    const box = h('div', { class: 'seg', role: 'group' });
+    const draw1 = () => box.replaceChildren(...items.map(([v, l]) => h('button', {
+      type: 'button', 'aria-pressed': String(S[key] === v),
+      onclick: () => { S[key] = v; saveS(); draw1(); }
+    }, l)));
+    draw1(); return box;
+  };
+  const sw = (key, label, small) => {
+    const id = 'sw-' + key;
+    const inp = h('input', { type: 'checkbox', role: 'switch', id });
+    inp.checked = !!S[key];
+    inp.addEventListener('change', () => { S[key] = inp.checked; saveS(); });
+    return h('div', { class: 'row' }, h('label', { for: id }, label, small ? h('small', null, small) : null), inp);
+  };
+  const range = h('input', { type: 'range', id: 'sens', min: '1', max: '10', step: '1', 'aria-label': 'Sensibilidad del soplido' });
+  range.value = S.sens;
+  range.addEventListener('input', () => { S.sens = +range.value; saveS(); });
+
+  const goInp = h('input', { type: 'number', id: 'goto', min: '1', max: String(TOTAL), inputmode: 'numeric' });
+  goInp.value = String(Math.min(N + 1, TOTAL));
+  const goBtn = h('button', { class: 'soft', type: 'button', onclick: () => {
+    const v = clamp(parseInt(goInp.value, 10) || 1, 1, TOTAL);
+    N = v - 1; saveP(); closeSheet(true); renderLevel();
+  } }, 'Ir');
+
+  let c1 = false, c2 = false;
+  const reset1 = h('button', { class: 'danger', type: 'button' }, 'Volver al animal 1');
+  reset1.addEventListener('click', () => {
+    if (!c1) { c1 = true; reset1.textContent = 'Pulsa otra vez para confirmar'; return; }
+    N = 0; saveP(); closeSheet(true); renderStart();
+  });
+  const wipe = h('button', { class: 'danger', type: 'button' }, 'Borrar progreso y álbum');
+  wipe.addEventListener('click', () => {
+    if (!c2) { c2 = true; wipe.textContent = 'Pulsa otra vez para borrar'; return; }
+    N = 0; DONE = 0; saveP(); updateAlbumCount(); closeSheet(true); renderStart();
+  });
+
+  const node = h('div', { class: 'sheet-card' },
+    h('h2', { class: 'set-title' }, 'Ajustes para adultos'),
+    h('div', { class: 'set-group' },
+      h('h3', null, 'Micrófono'),
+      micMsg,
+      h('div', { class: 'row-actions' }, h('button', { class: 'soft', type: 'button', onclick: async () => { micMsg.textContent = 'Probando el micrófono…'; await Mic.start(); micText(); } }, 'Activar o probar micrófono')),
+      h('div', { class: 'row' }, h('span', { class: 'lbl' }, 'Nivel de soplido'), chip),
+      meter,
+      h('div', { class: 'row' }, h('label', { for: 'sens' }, 'Sensibilidad', h('small', null, 'Más alta: detecta soplidos más suaves.')), range),
+      sw('voiceFilter', 'Distinguir soplido de voz', 'Si el soplido no se detecta, prueba a desactivarlo.')
+    ),
+    h('div', { class: 'set-group' },
+      h('h3', null, 'Dificultad'),
+      h('div', { class: 'row' }, h('span', { class: 'lbl' }, 'Duración del soplido', h('small', null, 'Cambia cuánto debe durar cada soplido en todos los niveles.')), seg('dur', [[0.7, 'Más corto'], [1, 'Normal'], [1.3, 'Más largo']])),
+      h('div', { class: 'row' }, h('label', { for: 'goto' }, 'Ir al animal número', h('small', null, 'De 1 a ' + TOTAL + '. Cada 10 animales cambia el nivel.')), h('div', { class: 'row-actions' }, goInp, goBtn))
+    ),
+    h('div', { class: 'set-group' },
+      h('h3', null, 'Sensaciones'),
+      sw('sounds', 'Sonidos suaves', 'Una campanita corta al acertar.'),
+      sw('speech', 'Botones de voz', 'Leen en voz alta solo cuando se pulsan.'),
+      sw('calm', 'Menos movimiento', 'Quita animaciones y destellos.')
+    ),
+    h('div', { class: 'row-actions' }, reset1, wipe),
+    h('div', { class: 'row-actions' }, h('button', { class: 'go', type: 'button', 'data-close': '1' }, 'Listo'))
+  );
+  openSheet(node, null);
+  settingsUI = { meterFill, chip };
+}
+
+$('#openSettings').addEventListener('click', openSettings);
+$('#openAlbum').addEventListener('click', openAlbum);
+
+/* ---------- Arranque ---------- */
+saveS();
+updateAlbumCount();
+renderStart();
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
