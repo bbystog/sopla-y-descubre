@@ -80,6 +80,10 @@ h1,h2,h3,p{margin:0}
   font-size:clamp(.7rem,2.6vw,.95rem);padding:2px 4px;line-height:1.2;text-wrap:balance
 }
 
+.airwrap{position:relative;width:min(100%,360px)}
+.airwrap .meter{height:12px;width:100%}
+.airwrap::after{content:"";position:absolute;left:40%;top:-3px;bottom:-3px;width:3px;border-radius:2px;background:var(--sea-deep);opacity:.5}
+.air-label{font-size:.85rem;color:var(--ink-soft);font-weight:700}
 .blow-status{font-weight:800;color:var(--sea-deep);min-height:1.9rem;font-size:1.15rem;text-wrap:balance}
 .hold{
   background:var(--mist);border:2px dashed var(--line);border-radius:16px;padding:10px 18px;min-height:52px;
@@ -422,9 +426,9 @@ const MIC_MSG = {
 function micMessage() { return MIC_MSG[Mic.state] + (Mic.err && Mic.state !== 'on' ? ' (Detalle técnico: ' + Mic.err + ')' : ''); }
 
 const Det = {
-  base: 0.004, level: 0, on: 0, off: 0, blowing: false,
+  base: 0.004, level: 0, on: 0, off: 0, blowing: false, thr: 0.01, rms: 0, flat: 0, rec: null,
   update(dt) {
-    if (Mic.state !== 'on') { this.blowing = false; this.level = 0; return { blowing: false, level: 0 }; }
+    if (Mic.state !== 'on') { this.blowing = false; this.level = 0; this.rms = 0; return { blowing: false, level: 0, rms: 0, thr: this.thr, flat: 0 }; }
     Mic.an.getFloatTimeDomainData(Mic.td);
     let s = 0; for (let i = 0; i < Mic.td.length; i++) s += Mic.td[i] * Mic.td[i];
     const rms = Math.sqrt(s / Mic.td.length);
@@ -433,16 +437,32 @@ const Det = {
     let sl = 0, sp = 0, n = 0;
     for (let i = lo; i <= hi; i++) { const p = Math.pow(10, Math.max(Mic.fd[i], -120) / 10); sl += Math.log(p); sp += p; n++; }
     const flat = n ? Math.exp(sl / n) / (sp / n) : 0;
-    const T = 9 - S.sens * 0.7, floor = 0.04 - S.sens * 0.0033;
-    const thr = Math.max(floor, this.base * T);
-    const cand = rms > thr && (!S.voiceFilter || flat > 0.05);
-    if (cand) { this.on += dt; this.off = 0; }
-    else { this.off += dt; this.on = 0; if (rms < thr) this.base = clamp(this.base * (1 - dt * 1.5) + rms * dt * 1.5, 0.002, 0.05); }
-    if (!this.blowing && this.on > 0.08) this.blowing = true;
-    if (this.blowing && this.off > 0.3) this.blowing = false;
+    this.rms = rms; this.flat = flat;
+    if (this.rec) this.rec.push([rms, flat]);
+    // Umbral: el calibrado con el niño, o uno automático que depende del ruido de la sala.
+    const cal = S.cal && S.cal.on ? S.cal : null;
+    const thr = cal ? cal.on : Math.max(0.022 - S.sens * 0.002, this.base * (6.5 - S.sens * 0.5));
+    this.thr = thr;
+    // Ruido de fondo: baja rápido y sube muy despacio, y solo con sonidos claramente por debajo del umbral,
+    // para que un soplido suave no lo suba y se vuelva cada vez más difícil de detectar.
+    if (rms < this.base) this.base += (rms - this.base) * Math.min(1, dt * 3);
+    else if (!this.blowing && rms < thr * 0.6) this.base += (rms - this.base) * Math.min(1, dt * 0.15);
+    this.base = clamp(this.base, 0.0005, 0.05);
+    const flatMin = cal && cal.flat ? cal.flat : 0.04;
+    const noisy = !S.voiceFilter || flat > flatMin;
+    if (!this.blowing) {
+      // Empieza al superar el umbral un instante.
+      if (rms > thr && noisy) this.on += dt; else this.on = 0;
+      if (this.on > 0.06) { this.blowing = true; this.off = 0; }
+    } else {
+      // Una vez soplando, sigue mientras haya al menos media señal: el aire se va acabando.
+      const keep = rms > Math.max(thr * 0.45, this.base * 1.6) && (!S.voiceFilter || flat > flatMin * 0.5);
+      this.off = keep ? 0 : this.off + dt;
+      if (this.off > 0.45) { this.blowing = false; this.on = 0; }
+    }
     const target = clamp(rms / (thr * 2.5), 0, 1);
     this.level += (target - this.level) * Math.min(1, dt * 12);
-    return { blowing: this.blowing, level: this.level };
+    return { blowing: this.blowing, level: this.level, rms, thr, flat };
   }
 };
 
@@ -536,6 +556,9 @@ function renderLevel() {
   const arena = h('div', { class: 'arena' }, cv, mystery);
   const status = h('p', { class: 'blow-status', role: 'status', 'aria-live': 'polite' });
   const micBox = h('div', { class: 'micbox' });
+  const airFill = h('i');
+  const air = h('div', { class: 'airwrap', 'aria-hidden': 'true' }, h('div', { class: 'meter' }, airFill));
+  const airLabel = h('p', { class: 'air-label', 'aria-hidden': 'true' }, 'Tu aire: pasa la raya para mover la bola');
 
   const holdBtn = h('button', { class: 'hold', type: 'button' }, 'Sin micrófono: mantén pulsado aquí');
   const down = e => { e.preventDefault(); holding = true; holdBtn.classList.add('down'); };
@@ -554,11 +577,11 @@ function renderLevel() {
 
   stage.replaceChildren(
     h('div', { class: 'q-row' }, h('h1', { class: 'q' }, 'Sopla largo y sin parar'), speakBtn('Coge mucho aire y sopla sin parar, hasta que la bola caiga en el hoyo.', 'Escuchar')),
-    hud, arena, status, micBox, holdBtn
+    hud, arena, status, air, airLabel, micBox, holdBtn
   );
 
   G = {
-    a, tier, P, cv, ctx: cv.getContext('2d'), mystery, img, qm, tag, status,
+    a, tier, P, cv, ctx: cv.getContext('2d'), mystery, img, qm, tag, status, airFill,
     s: { x: 0, v: 0 }, rot: 0, maxX: 0, phase: 'ready', t: 0, idle: 0, dropT: 0, dropFrom: null,
     sparks: [], lastMsg: '', w: 0, h: 0, lastBlur: -1, winAt: 0
   };
@@ -743,6 +766,7 @@ function loop(ts) {
     settingsUI.chip.textContent = Mic.state === 'on' ? (det.blowing ? 'Soplando' : 'Silencio') : '—';
     settingsUI.chip.classList.toggle('on', !!det.blowing);
   }
+  if (G && G.airFill) G.airFill.style.width = Math.round(det.level * 100) + '%';
   if (G && G.w) {
     if (!sheetEl || G.phase === 'won') { try { update(dt, sheetEl ? { blowing: false, level: 0 } : det); } catch (e) { console.error(e); } }
     try { draw(); } catch (e) { console.error(e); }
@@ -822,6 +846,69 @@ function openAlbum() {
   openSheet(h('div', { class: 'sheet-card wide' }, parts), null);
 }
 
+/* ---------- Calibrar el soplido con el niño ---------- */
+function computeCal(quiet, blow) {
+  const med = a => { const s = a.slice().sort((x, y) => x - y); return s.length ? s[Math.floor(s.length / 2)] : 0; };
+  const noise = med(quiet.map(x => x[0]));
+  const loud = blow.filter(x => x[0] > Math.max(noise * 1.8, 0.0025));
+  if (loud.length < 15) return null; // menos de unos 0,25 s de soplido claro
+  const p = med(loud.map(x => x[0]));
+  if (p < noise * 2.5) return null;  // el soplido apenas se distingue del ruido de la sala
+  const on = Math.min(Math.max(noise * 2.2, p * 0.4, 0.0025), p * 0.8);
+  const flat = clamp(med(loud.map(x => x[1])) * 0.4, 0.008, 0.05);
+  return { on: +on.toFixed(4), flat: +flat.toFixed(3) };
+}
+async function openCalibrate() {
+  const body = h('div', { class: 'sheet-card' });
+  openSheet(body, openSettings);
+  const mine = sheetEl;
+  let timer = null;
+  const stop = () => { if (timer) { clearInterval(timer); timer = null; } Det.rec = null; };
+  const show = (title, text, extra) => body.replaceChildren(
+    h('h2', { class: 'set-title' }, title),
+    h('p', { class: 'help', style: 'text-align:left;max-width:none' }, text),
+    ...(extra || []));
+  const btn = (cls, label, fn, close) => h('button', { class: cls, type: 'button', onclick: fn, 'data-close': close ? '1' : null }, label);
+  const intro = () => show('Calibrar el soplido',
+    'Mide cómo suena el soplido de tu hijo, para que el juego lo detecte aunque sople flojo. Ponle el móvil a la distancia a la que va a jugar. Primero habrá 2 segundos de silencio y después 4 segundos para soplar.',
+    [h('div', { class: 'row-actions' }, btn('go', 'Empezar', run), btn('soft', 'Volver', null, true))]);
+  const fail = (msg) => show('No se pudo calibrar', msg, [h('div', { class: 'row-actions' }, btn('go', 'Repetir', run), btn('soft', 'Volver', null, true))]);
+  async function run() {
+    stop();
+    if (Mic.state !== 'on') {
+      show('Calibrar el soplido', 'Probando el micrófono…');
+      await Mic.start();
+      if (sheetEl !== mine) return;
+      if (Mic.state !== 'on') { fail(micMessage()); return; }
+    }
+    const fill = h('i'), meter = h('div', { class: 'meter', 'aria-hidden': 'true' }, fill);
+    const big = h('p', { class: 'start-title', style: 'font-size:2rem;text-align:left' });
+    show('Calibrar el soplido', '', [big, meter]);
+    let quiet = [], blow = [], t = 0, phase = 'quiet';
+    Det.rec = [];
+    timer = setInterval(() => {
+      if (sheetEl !== mine) { stop(); return; }
+      t += 0.1;
+      fill.style.width = Math.round(Det.level * 100) + '%';
+      if (phase === 'quiet') {
+        big.textContent = 'Silencio, por favor…';
+        if (t >= 2) { quiet = Det.rec || []; Det.rec = []; phase = 'blow'; t = 0; }
+      } else {
+        big.textContent = '¡Ahora sopla! ' + Math.max(0, Math.ceil(4.5 - t)) + ' s';
+        if (t >= 4.5) {
+          blow = Det.rec || []; stop();
+          const cal = computeCal(quiet, blow);
+          if (!cal) { fail('No se oyó un soplido claro frente al ruido de la sala. Acerca el micrófono, sopla más largo o repite en un sitio más tranquilo.'); return; }
+          S.cal = cal; saveS();
+          show('Calibrado', 'Listo. El juego detectará soplidos como el de esta prueba. Si más adelante quieres volver al ajuste automático, pulsa «Quitar calibración» en los ajustes.',
+            [h('div', { class: 'row-actions' }, btn('go', 'Hecho', null, true), btn('soft', 'Repetir', run))]);
+        }
+      }
+    }, 100);
+  }
+  intro();
+}
+
 /* ---------- Ajustes para adultos ---------- */
 function openSettings() {
   const meterFill = h('i');
@@ -874,10 +961,12 @@ function openSettings() {
     h('div', { class: 'set-group' },
       h('h3', null, 'Micrófono'),
       micMsg,
-      h('div', { class: 'row-actions' }, h('button', { class: 'soft', type: 'button', onclick: async () => { micMsg.textContent = 'Probando el micrófono…'; await Mic.start(); micText(); } }, 'Activar o probar micrófono')),
+      h('div', { class: 'row-actions' }, h('button', { class: 'soft', type: 'button', onclick: async () => { micMsg.textContent = 'Probando el micrófono…'; await Mic.start(); micText(); } }, 'Activar o probar micrófono'),
+        h('button', { class: 'soft', type: 'button', onclick: openCalibrate }, S.cal ? 'Calibrar de nuevo' : 'Calibrar con el niño'),
+        S.cal ? h('button', { class: 'danger', type: 'button', onclick: () => { delete S.cal; saveS(); openSettings(); } }, 'Quitar calibración') : null),
       h('div', { class: 'row' }, h('span', { class: 'lbl' }, 'Nivel de soplido'), chip),
       meter,
-      h('div', { class: 'row' }, h('label', { for: 'sens' }, 'Sensibilidad', h('small', null, 'Más alta: detecta soplidos más suaves.')), range),
+      h('div', { class: 'row' }, h('label', { for: 'sens' }, 'Sensibilidad', h('small', null, 'Más alta: detecta soplidos más suaves. No se usa si has calibrado.')), range),
       sw('voiceFilter', 'Distinguir soplido de voz', 'Si el soplido no se detecta, prueba a desactivarlo.')
     ),
     h('div', { class: 'set-group' },

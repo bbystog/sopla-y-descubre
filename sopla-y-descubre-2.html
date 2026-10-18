@@ -1,0 +1,972 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Sopla y Descubre</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* Diseño: una sola columna calmada. Arriba el camino de 3 pasos (siempre igual),
+   en el centro la actividad, abajo el álbum de animales descubiertos. */
+:root{
+  --ink:#13353d;
+  --ink-soft:#4b6a70;
+  --mist:#e8f2f0;
+  --paper:#ffffff;
+  --line:#cfe1de;
+  --sea:#1d7f86;
+  --sea-deep:#145e64;
+  --sun:#f2b84b;
+  --leaf:#4f9d69;
+  --coral:#e56f56;
+  --hint:#dcebf3;
+  --hint-ink:#24566f;
+  --display:'Fredoka','Arial Rounded MT Bold','Trebuchet MS',ui-rounded,system-ui,sans-serif;
+  --body:'Nunito','Segoe UI',system-ui,-apple-system,sans-serif;
+  --emoji:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--mist);color:var(--ink);
+  font-family:var(--body);font-size:18px;line-height:1.5;min-height:100vh;
+  padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(28px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));
+}
+button{font:inherit;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+button:disabled{cursor:default}
+:focus-visible{outline:4px solid var(--sun);outline-offset:3px}
+h1,h2,h3,p{margin:0}
+.app{max-width:760px;margin:0 auto;display:grid;gap:16px}
+
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:600;font-size:1.3rem}
+.brand .mark{width:30px;height:40px;display:block}
+.brand .mark svg{width:100%;height:100%;display:block}
+.ghost{display:inline-flex;align-items:center;gap:8px;background:transparent;border:2px solid var(--line);border-radius:14px;padding:6px 14px;min-height:44px;color:var(--ink-soft);font-weight:700}
+.ghost svg{width:20px;height:20px}
+
+.trail{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;list-style:none;margin:0;padding:0}
+.trail li{border-radius:14px;padding:8px 6px;background:var(--paper);border:2px solid var(--line);font-weight:800;font-size:.92rem;text-align:center;color:var(--ink-soft)}
+.trail li.on{border-color:var(--sea);color:var(--sea-deep);background:#f2fbfa}
+.trail li.done{background:var(--sea);border-color:var(--sea);color:#fff}
+
+.stage{
+  background:var(--paper);border:2px solid var(--line);border-radius:28px;
+  padding:clamp(18px,4vw,32px);display:grid;gap:18px;justify-items:center;align-content:start;
+  text-align:center;min-height:400px;
+}
+.q-row{display:flex;align-items:center;justify-content:center;gap:12px}
+.q{font-family:var(--display);font-weight:600;font-size:clamp(1.7rem,5vw,2.4rem);line-height:1.15;text-wrap:balance}
+.help{color:var(--ink-soft);font-size:1.05rem;max-width:34rem;text-wrap:balance}
+.say{flex:none;width:48px;height:48px;border-radius:50%;border:2px solid var(--line);background:var(--mist);color:var(--sea-deep);display:grid;place-items:center}
+.say svg{width:24px;height:24px}
+
+.group{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;max-width:100%}
+.animal{
+  position:relative;display:inline-block;border:0;background:transparent;padding:2px 4px;margin:0;
+  font-family:var(--emoji);font-size:var(--em,3.2rem);line-height:1.1;border-radius:16px;
+}
+button.animal:active{background:var(--mist)}
+.animal .n{
+  position:absolute;right:-2px;bottom:-6px;min-width:1.7rem;height:1.7rem;padding:0 6px;border-radius:999px;
+  background:var(--sea);color:#fff;font-family:var(--body);font-weight:800;font-size:1rem;line-height:1;
+  display:grid;place-items:center;border:2px solid var(--paper);
+}
+.animal.leaving{opacity:.3;filter:grayscale(1);outline:2px dashed var(--ink-soft);outline-offset:-3px}
+
+.pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;width:100%}
+.pick{
+  background:var(--paper);border:3px solid var(--sea);border-radius:24px;padding:14px 8px;min-height:150px;
+  display:grid;gap:8px;align-content:center;justify-items:center;min-width:0;
+}
+.pick .cnt{font-family:var(--display);font-size:2.2rem;font-weight:600;color:var(--sea-deep);min-height:2.6rem}
+.pick.is-hint{background:var(--hint);border-color:#a9c9da}
+.pick.guide{border-color:var(--sun);background:#fff7e3;border-width:5px}
+
+.eq{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px 14px;width:100%}
+.eq .box{border:2px dashed var(--line);border-radius:22px;padding:10px 8px;max-width:100%}
+.eq .op{font-family:var(--display);font-size:2.8rem;font-weight:600;color:var(--sea-deep);line-height:1}
+.eq .res{font-family:var(--display);font-size:3rem;font-weight:600;color:var(--sea-deep);line-height:1;min-width:2.2rem}
+
+.choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;width:100%;max-width:480px}
+.choice{
+  min-height:88px;border-radius:24px;border:3px solid var(--sea);background:var(--paper);color:var(--sea-deep);
+  font-family:var(--display);font-size:2.7rem;font-weight:600;line-height:1;
+}
+.choice:active{background:#f2fbfa}
+.choice.is-hint{background:var(--hint);border-color:#a9c9da;color:var(--hint-ink)}
+.choice.guide{border-color:var(--sun);background:#fff7e3;border-width:5px}
+.choice.right{background:var(--leaf);border-color:var(--leaf);color:#fff}
+.locked .choices,.locked .pair,.locked .animal{pointer-events:none}
+
+.fb{min-height:2.6rem;font-weight:800;font-size:1.2rem;border-radius:14px;padding:6px 16px;max-width:100%}
+.fb:empty{padding:0}
+.fb.good{color:#1d5f38;background:#e3f4e8}
+.fb.hint{color:var(--hint-ink);background:var(--hint)}
+.next{min-height:70px;display:grid;place-items:center}
+
+.go{
+  background:var(--sea);color:#fff;border:0;border-radius:20px;min-height:64px;padding:12px 34px;
+  font-family:var(--display);font-size:1.5rem;font-weight:600;box-shadow:0 4px 0 var(--sea-deep);
+}
+.go:active{transform:translateY(2px);box-shadow:0 2px 0 var(--sea-deep)}
+.soft{background:var(--paper);color:var(--sea-deep);border:2px solid var(--sea);border-radius:16px;min-height:52px;padding:8px 20px;font-weight:800}
+
+.mill{width:min(60vw,250px)}
+.mill svg{width:100%;height:auto;display:block}
+.meter{width:min(100%,420px);height:22px;border-radius:999px;background:var(--mist);border:2px solid var(--line);overflow:hidden}
+.meter i{display:block;height:100%;width:0;background:var(--sun);border-radius:999px}
+.airwrap{position:relative;width:min(100%,360px)}
+.airwrap .meter{height:12px;width:100%}
+.airwrap::after{content:"";position:absolute;left:40%;top:-3px;bottom:-3px;width:3px;border-radius:2px;background:var(--sea-deep);opacity:.5}
+.air-label{font-size:.85rem;color:var(--ink-soft);font-weight:700}
+.blow-status{font-weight:800;color:var(--sea-deep);min-height:1.7rem}
+.hold{
+  background:var(--mist);border:2px dashed var(--line);border-radius:16px;padding:10px 18px;min-height:52px;
+  color:var(--ink-soft);font-weight:700;touch-action:none;user-select:none;-webkit-user-select:none;
+}
+.hold.down{background:var(--hint);border-color:#a9c9da}
+
+.start-title{font-family:var(--display);font-weight:600;font-size:clamp(2.2rem,8vw,3.2rem);line-height:1.05}
+.note{max-width:34rem;text-align:left;font-size:.95rem;color:var(--ink-soft);background:var(--mist);border-radius:18px;padding:12px 16px}
+.note b{color:var(--ink)}
+
+.album{background:var(--paper);border:2px solid var(--line);border-radius:24px;padding:18px;display:grid;gap:14px}
+.album-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.album-head h2{font-family:var(--display);font-weight:600;font-size:1.35rem}
+.album-head span{color:var(--ink-soft);font-weight:700}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:10px}
+.tile{
+  border:2px solid var(--line);border-radius:18px;background:var(--mist);padding:8px 4px;
+  display:grid;gap:4px;justify-items:center;align-content:start;min-width:0;font-weight:800;font-size:.82rem;line-height:1.2;text-align:center;
+}
+button.tile:active{background:var(--hint)}
+.tile .th{width:64px;height:64px;border-radius:50%;overflow:hidden;position:relative;background:var(--hint);display:grid;place-items:center}
+.tile.locked-tile{color:var(--ink-soft);border-style:dashed;background:transparent}
+.tile.locked-tile .th{background:var(--mist);font-family:var(--display);font-size:2rem;color:var(--line)}
+.tile .nm{overflow-wrap:anywhere}
+
+.photo{position:relative;width:100%;aspect-ratio:4/3;border-radius:22px;overflow:hidden;background:var(--hint);display:grid;place-items:center}
+.photo .ph{font-family:var(--display);font-size:5rem;color:#a9c9da}
+.photo img,.th img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .4s}
+.photo.ok img,.th.ok img{opacity:1}
+.photo.ok .ph,.th.ok .ph{display:none}
+.th .ph{font-family:var(--display);font-size:1.8rem;color:#a9c9da}
+
+.sheet{position:fixed;inset:0;z-index:20;background:rgba(19,53,61,.6);overflow:auto;padding:max(16px,env(safe-area-inset-top)) 16px max(24px,env(safe-area-inset-bottom));display:grid;justify-items:center;align-items:start}
+.sheet-card{width:min(100%,560px);background:var(--paper);border-radius:28px;padding:clamp(16px,4vw,26px);display:grid;gap:14px;margin-block:auto;animation:rise .35s ease-out}
+@keyframes rise{from{opacity:0;transform:translateY(14px) scale(.98)}to{opacity:1;transform:none}}
+.kicker{font-weight:800;color:var(--sea-deep);letter-spacing:.06em;text-transform:uppercase;font-size:.85rem}
+.card-name{font-family:var(--display);font-weight:600;font-size:clamp(2.2rem,8vw,3rem);line-height:1.05}
+.sci{font-style:italic;color:var(--ink-soft)}
+.where{display:inline-flex;gap:8px;align-items:center;background:var(--mist);border-radius:999px;padding:6px 14px;font-weight:800;width:fit-content}
+.card-sub{font-family:var(--display);font-weight:500;font-size:1.3rem}
+.facts{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.facts li{position:relative;padding:12px 14px 12px 44px;border-radius:16px;background:var(--mist);font-size:1.18rem;line-height:1.4}
+.facts li::before{content:"";position:absolute;left:17px;top:1.05em;width:13px;height:13px;border-radius:50%;background:var(--sun)}
+.credit{font-size:.82rem;color:var(--ink-soft)}
+.credit a{color:var(--sea-deep)}
+.row-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+
+.set-title{font-family:var(--display);font-weight:600;font-size:1.6rem}
+.set-group{display:grid;gap:4px}
+.set-group>h3{font-family:var(--display);font-weight:500;font-size:1.1rem;color:var(--sea-deep);margin-top:8px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.row label,.row .lbl{font-weight:700}
+.row small{display:block;color:var(--ink-soft);font-weight:400;font-size:.88rem;line-height:1.3}
+.seg{display:inline-flex;border:2px solid var(--line);border-radius:14px;overflow:hidden}
+.seg button{border:0;background:var(--paper);padding:8px 14px;min-height:44px;font-weight:800;color:var(--ink-soft)}
+.seg button[aria-pressed="true"]{background:var(--sea);color:#fff}
+input[type=range]{width:min(100%,220px);accent-color:var(--sea);height:32px}
+input[type=checkbox][role=switch]{appearance:none;-webkit-appearance:none;width:52px;height:30px;border-radius:999px;background:var(--line);position:relative;flex:none;cursor:pointer;border:0;margin:0;transition:background .2s}
+input[type=checkbox][role=switch]::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:transform .2s}
+input[type=checkbox][role=switch]:checked{background:var(--sea)}
+input[type=checkbox][role=switch]:checked::after{transform:translateX(22px)}
+.chip{display:inline-block;border-radius:999px;padding:2px 12px;background:var(--mist);font-weight:800;color:var(--ink-soft);min-width:5.5rem;text-align:center}
+.chip.on{background:#e3f4e8;color:#1d5f38}
+.danger{background:var(--paper);border:2px solid var(--coral);color:#a43d27;border-radius:14px;padding:8px 16px;min-height:44px;font-weight:800}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+body.calm *,body.calm *::before,body.calm *::after{animation:none!important;transition:none!important}
+@media (max-width:420px){
+  body{font-size:17px}
+  .choice{font-size:2.3rem;min-height:80px}
+  .pick{padding:10px 4px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand"><span class="mark" id="brandMark" aria-hidden="true"></span><span>Sopla y Descubre</span></div>
+    <button class="ghost" id="openSettings" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2.4"/><circle cx="9" cy="17" r="2.4"/></svg>
+      Ajustes
+    </button>
+  </header>
+  <ol class="trail" id="trail" hidden aria-label="Pasos">
+    <li>Actividad 1</li>
+    <li>Actividad 2</li>
+    <li>Soplar</li>
+  </ol>
+  <main class="stage" id="stage"></main>
+  <section class="album" id="album" aria-labelledby="albumH"></section>
+</div>
+<noscript>Este juego necesita JavaScript.</noscript>
+
+<script>
+(() => {
+'use strict';
+
+/* ---------- Datos: animales raros ---------- */
+const ANIMALS = [
+  {id:'ajolote', name:'Ajolote', sci:'Ambystoma mexicanum', where:'Lagos de México', titles:['Ambystoma mexicanum','Ajolote'],
+   facts:['Es un anfibio y casi siempre vive dentro del agua.','Si pierde una pata, le vuelve a crecer una nueva.','Conserva sus branquias de bebé: parecen plumas rosas a los lados de la cabeza.']},
+  {id:'ornitorrinco', name:'Ornitorrinco', sci:'Ornithorhynchus anatinus', where:'Ríos de Australia', titles:['Ornithorhynchus anatinus','Ornitorrinco'],
+   facts:['Es un mamífero, pero pone huevos.','Con su pico de pato detecta la electricidad de sus presas bajo el agua.','El macho tiene un espolón con veneno en cada pata trasera.']},
+  {id:'pangolin', name:'Pangolín', sci:'Familia Manidae', where:'África y Asia', titles:['Pangolín','Manidae'],
+   facts:['Es el único mamífero cubierto de escamas.','Cuando tiene miedo se enrolla como una pelota.','No tiene dientes: come hormigas y termitas con su lengua larguísima.']},
+  {id:'ayeaye', name:'Aye-aye', sci:'Daubentonia madagascariensis', where:'Madagascar', titles:['Daubentonia madagascariensis','Aye-aye'],
+   facts:['Sale de noche y vive en los árboles de Madagascar.','Tiene un dedo larguísimo y fino para sacar bichitos de los troncos.','Golpea la madera y escucha con sus orejas enormes para encontrar larvas.']},
+  {id:'okapi', name:'Okapi', sci:'Okapia johnstoni', where:'Selva del Congo', titles:['Okapia johnstoni','Okapi'],
+   facts:['Parece una mezcla de cebra y jirafa, pero es pariente de la jirafa.','Su lengua mide más de 30 centímetros y con ella se limpia hasta las orejas.','Es muy tímido y se esconde en la selva.']},
+  {id:'narval', name:'Narval', sci:'Monodon monoceros', where:'Mares fríos del Ártico', titles:['Monodon monoceros','Narval'],
+   facts:['Vive en el mar helado del Ártico.','Su colmillo largo y en espiral es en realidad un diente.','Puede medir hasta 3 metros, por eso lo llaman el unicornio del mar.']},
+  {id:'kakapo', name:'Kakapo', sci:'Strigops habroptilus', where:'Bosques de Nueva Zelanda', titles:['Strigops habroptilus','Kakapo'],
+   facts:['Es un loro que no puede volar.','Es el loro más pesado del mundo y sale de noche.','Quedan muy pocos, así que mucha gente lo cuida en Nueva Zelanda.']},
+  {id:'saiga', name:'Saiga', sci:'Saiga tatarica', where:'Estepas de Asia central', titles:['Saiga tatarica','Saiga'],
+   facts:['Es un antílope que corre en grandes grupos.','Su nariz grande y blanda calienta el aire frío antes de que llegue a sus pulmones.','Esa nariz también filtra el polvo del camino.']},
+  {id:'tarsero', name:'Tarsero', sci:'Familia Tarsiidae', where:'Selvas del sudeste de Asia', titles:['Tarsiidae','Tarsero'],
+   facts:['Es un primate diminuto que cabe en la palma de una mano.','Cada uno de sus ojos es más grande que su cerebro.','Puede girar la cabeza casi hasta atrás, porque sus ojos no se mueven.']},
+  {id:'quokka', name:'Quokka', sci:'Setonix brachyurus', where:'Australia occidental', titles:['Setonix brachyurus','Quokka'],
+   facts:['Parece que siempre sonríe, por eso es famoso.','Es un marsupial: su bebé crece en una bolsa de la mamá.','Vive sobre todo en la isla Rottnest, en Australia.']},
+  {id:'pezluna', name:'Pez luna', sci:'Mola mola', where:'Mares templados y tropicales', titles:['Mola mola','Pez luna'],
+   facts:['Es el pez óseo más pesado del mundo: puede pesar más de dos toneladas.','Parece una cabeza gigante con aletas.','Le gusta tumbarse de lado cerca de la superficie para calentarse al sol, y come medusas.']},
+  {id:'dragonmarino', name:'Dragón marino foliáceo', sci:'Phycodurus eques', where:'Costas del sur de Australia', titles:['Phycodurus eques','Dragón marino foliáceo'],
+   facts:['Parece un trozo de alga flotando, así se esconde.','Es pariente del caballito de mar.','El papá lleva los huevitos pegados a su cola.']},
+  {id:'pezgota', name:'Pez gota', sci:'Psychrolutes marcidus', where:'Fondo del mar, cerca de Australia', titles:['Psychrolutes marcidus','Pez gota'],
+   facts:['Vive en el fondo del mar, muy profundo.','Su cuerpo es blando como una gelatina.','Fuera del agua se aplasta y su cara parece triste, pero en el mar es normal.']}
+];
+const EMO = ['🐶','🐱','🐢','🐟','🦆','🐸','🐝','🐞','🐘','🐰','🐮','🦉','🐧','🐻'];
+
+/* ---------- Utilidades ---------- */
+const $ = (s, el = document) => el.querySelector(s);
+const ri = (a, b) => Math.floor(Math.random() * (b - a + 1)) + a;
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function h(tag, attrs, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v === false || v == null) continue;
+    if (k === 'class') e.className = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else if (v === true) e.setAttribute(k, '');
+    else e.setAttribute(k, v);
+  }
+  for (const k of kids.flat(Infinity)) {
+    if (k == null || k === false) continue;
+    e.append(k.nodeType ? k : document.createTextNode(String(k)));
+  }
+  return e;
+}
+const LS = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+};
+
+/* ---------- Ajustes y álbum ---------- */
+const DEF = { sens: 6, dur: 3, max: 10, voiceFilter: true, sounds: true, speech: true, calm: false };
+let S = Object.assign({}, DEF, LS.get('syd.settings', {}));
+let album = LS.get('syd.album', []);
+const saveS = () => { LS.set('syd.settings', S); document.body.classList.toggle('calm', !!S.calm); };
+
+/* ---------- Sonido suave ---------- */
+let actx = null;
+function ac() {
+  if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
+  return actx;
+}
+function chime(kind) {
+  if (!S.sounds) return;
+  const c = ac(); if (!c) return;
+  try { if (c.state === 'suspended') c.resume(); } catch (e) {}
+  const notes = kind === 'win' ? [523.25, 659.25, 783.99] : [587.33, 740];
+  const now = c.currentTime;
+  notes.forEach((f, i) => {
+    const o = c.createOscillator(), g = c.createGain(), t = now + i * 0.12;
+    o.type = 'sine'; o.frequency.value = f;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(0.06, t + 0.03);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.55);
+    o.connect(g); g.connect(c.destination);
+    o.start(t); o.stop(t + 0.6);
+  });
+}
+
+/* ---------- Voz (solo cuando se pulsa un botón) ---------- */
+function speak(text) {
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'es-ES'; u.rate = 0.9;
+    const v = speechSynthesis.getVoices().find(x => /^es/i.test(x.lang));
+    if (v) u.voice = v;
+    speechSynthesis.speak(u);
+  } catch (e) {}
+}
+const SPEAKER = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6h4l5 4V5L7 9H3z" fill="currentColor"/><path d="M16 8.5a5 5 0 010 7M18.5 6a8.5 8.5 0 010 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+function speakBtn(text, label) {
+  if (!S.speech || !('speechSynthesis' in window)) return null;
+  const b = h('button', { class: 'say', type: 'button', 'aria-label': label || 'Escuchar', onclick: () => speak(text) });
+  b.innerHTML = SPEAKER;
+  return b;
+}
+
+/* ---------- Micrófono y detección de soplido ---------- */
+const Mic = {
+  state: 'idle', // idle | on | denied | unavailable
+  async start() {
+    if (this.state === 'on') return true;
+    this.err = '';
+    // El audio se activa dentro del gesto del usuario (necesario en iPhone/iPad).
+    const c0 = ac();
+    try { if (c0 && c0.state === 'suspended') c0.resume(); } catch (e0) {}
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { this.state = window.isSecureContext === false ? 'insecure' : 'unavailable'; return false; }
+    try {
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+      } catch (e1) {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      }
+      const c = ac();
+      if (!c) { this.state = 'unavailable'; return false; }
+      if (c.state === 'suspended') { try { await c.resume(); } catch (e) {} }
+      const src = c.createMediaStreamSource(stream);
+      const an = c.createAnalyser();
+      an.fftSize = 2048; an.smoothingTimeConstant = 0.2;
+      src.connect(an);
+      this.stream = stream; this.an = an;
+      this.td = new Float32Array(an.fftSize);
+      this.fd = new Float32Array(an.frequencyBinCount);
+      this.binHz = c.sampleRate / an.fftSize;
+      this.state = 'on';
+      return true;
+    } catch (e) {
+      const n = (e && e.name) || 'Error';
+      this.err = n;
+      let perm = '';
+      try { perm = (await navigator.permissions.query({ name: 'microphone' })).state; } catch (e2) {}
+      let framed = false;
+      try { framed = window.self !== window.top; } catch (e3) { framed = true; }
+      if (window.isSecureContext === false) this.state = 'insecure';
+      else if (n === 'NotReadableError' || n === 'AbortError') this.state = 'busy';
+      else if (n === 'NotFoundError' || n === 'DevicesNotFoundError') this.state = 'nomic';
+      else if (perm === 'granted' || (perm !== 'denied' && framed)) this.state = 'blocked';
+      else if (n === 'NotAllowedError' || n === 'SecurityError' || n === 'PermissionDeniedError') this.state = 'denied';
+      else this.state = 'unavailable';
+      return false;
+    }
+  }
+};
+const MIC_MSG = {
+  idle: 'El micrófono aún no está activado.',
+  on: 'Micrófono activo.',
+  denied: 'El navegador tiene el micrófono bloqueado para esta página. Toca el candado (o los ajustes del sitio) junto a la dirección, permite el micrófono y pulsa «Probar de nuevo».',
+  blocked: 'El micrófono tiene permiso, pero la página no puede usarlo desde aquí. Pasa cuando el juego está abierto dentro de otra app o vista previa. Ábrelo directamente en Chrome o Safari.',
+  insecure: 'Este navegador solo deja usar el micrófono en direcciones https. Sube el archivo a Netlify Drop o GitHub Pages y ábrelo desde esa dirección.',
+  busy: 'Otra aplicación está usando el micrófono. Ciérrala y prueba de nuevo.',
+  nomic: 'No se encuentra ningún micrófono en este dispositivo.',
+  unavailable: 'Este navegador no permite usar el micrófono aquí.'
+};
+function micMessage() {
+  return MIC_MSG[Mic.state] + (Mic.err && Mic.state !== 'on' ? ' (Detalle técnico: ' + Mic.err + ')' : '');
+}
+const Det = {
+  base: 0.004, level: 0, on: 0, off: 0, blowing: false, thr: 0.01, rms: 0, flat: 0, rec: null,
+  update(dt) {
+    if (Mic.state !== 'on') { this.blowing = false; this.level = 0; this.rms = 0; return { blowing: false, level: 0, rms: 0, thr: this.thr, flat: 0 }; }
+    Mic.an.getFloatTimeDomainData(Mic.td);
+    let s = 0; for (let i = 0; i < Mic.td.length; i++) s += Mic.td[i] * Mic.td[i];
+    const rms = Math.sqrt(s / Mic.td.length);
+    Mic.an.getFloatFrequencyData(Mic.fd);
+    const lo = Math.max(1, Math.floor(100 / Mic.binHz)), hi = Math.min(Mic.fd.length - 1, Math.floor(4000 / Mic.binHz));
+    let sl = 0, sp = 0, n = 0;
+    for (let i = lo; i <= hi; i++) { const p = Math.pow(10, Math.max(Mic.fd[i], -120) / 10); sl += Math.log(p); sp += p; n++; }
+    const flat = n ? Math.exp(sl / n) / (sp / n) : 0;
+    this.rms = rms; this.flat = flat;
+    if (this.rec) this.rec.push([rms, flat]);
+    // Umbral: el calibrado con el niño, o uno automático que depende del ruido de la sala.
+    const cal = S.cal && S.cal.on ? S.cal : null;
+    const thr = cal ? cal.on : Math.max(0.022 - S.sens * 0.002, this.base * (6.5 - S.sens * 0.5));
+    this.thr = thr;
+    // Ruido de fondo: baja rápido y sube muy despacio, y solo con sonidos claramente por debajo del umbral,
+    // para que un soplido suave no lo suba y se vuelva cada vez más difícil de detectar.
+    if (rms < this.base) this.base += (rms - this.base) * Math.min(1, dt * 3);
+    else if (!this.blowing && rms < thr * 0.6) this.base += (rms - this.base) * Math.min(1, dt * 0.15);
+    this.base = clamp(this.base, 0.0005, 0.05);
+    const flatMin = cal && cal.flat ? cal.flat : 0.04;
+    const noisy = !S.voiceFilter || flat > flatMin;
+    if (!this.blowing) {
+      // Empieza al superar el umbral un instante.
+      if (rms > thr && noisy) this.on += dt; else this.on = 0;
+      if (this.on > 0.06) { this.blowing = true; this.off = 0; }
+    } else {
+      // Una vez soplando, sigue mientras haya al menos media señal: el aire se va acabando.
+      const keep = rms > Math.max(thr * 0.45, this.base * 1.6) && (!S.voiceFilter || flat > flatMin * 0.5);
+      this.off = keep ? 0 : this.off + dt;
+      if (this.off > 0.45) { this.blowing = false; this.on = 0; }
+    }
+    const target = clamp(rms / (thr * 2.5), 0, 1);
+    this.level += (target - this.level) * Math.min(1, dt * 12);
+    return { blowing: this.blowing, level: this.level, rms, thr, flat };
+  }
+};
+
+/* ---------- Molinillo (SVG) ---------- */
+function pinwheel() {
+  const blades = [['--sea', 0], ['--sun', 90], ['--leaf', 180], ['--coral', 270]]
+    .map(([c, r]) => `<path d="M100 100 L100 18 C140 22 170 54 166 98 Z" transform="rotate(${r} 100 100)" style="fill:var(${c})"/>`).join('');
+  return `<svg viewBox="0 0 200 270" role="img" aria-label="Molinillo de viento"><rect x="96" y="100" width="8" height="165" rx="4" style="fill:var(--ink-soft)"/><g class="blades">${blades}</g><circle cx="100" cy="100" r="10" style="fill:var(--paper);stroke:var(--ink);stroke-width:3"/></svg>`;
+}
+
+/* ---------- Fotos desde Wikipedia (con plan B sin internet) ---------- */
+function fetchPhoto(a) {
+  if (a._p) return a._p;
+  a._p = (async () => {
+    for (const t of a.titles) {
+      try {
+        const r = await fetch('https://es.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(t));
+        if (!r.ok) continue;
+        const j = await r.json();
+        const th = j.thumbnail && j.thumbnail.source;
+        if (th) return { thumb: th, big: th.replace(/\/\d+px-/, '/640px-'), page: (j.content_urls && j.content_urls.desktop && j.content_urls.desktop.page) || '' };
+      } catch (e) {}
+    }
+    return null;
+  })().then(v => { if (!v) a._p = null; return v; });
+  return a._p;
+}
+function photoInto(wrap, a, useThumb) {
+  wrap.append(h('span', { class: 'ph', 'aria-hidden': 'true' }, a.name[0]));
+  fetchPhoto(a).then(info => {
+    if (!info) return;
+    const img = h('img', { alt: a.name, loading: 'lazy', referrerpolicy: 'no-referrer' });
+    img.addEventListener('load', () => wrap.classList.add('ok'));
+    img.addEventListener('error', () => { if (img.src !== info.thumb) img.src = info.thumb; });
+    img.src = useThumb ? info.thumb : info.big;
+    wrap.append(img);
+  });
+}
+
+/* ---------- Estado de la ronda ---------- */
+const stage = $('#stage');
+const trail = $('#trail');
+let R = null;          // ronda actual
+let stageToken = 0;    // invalida bucles asincrónicos de una pantalla anterior
+let fb = null, nextBox = null;
+let sheetOpen = false;
+let blow = null;       // estado de la pantalla de soplar
+let holding = false;
+
+function setFB(msg, type) {
+  if (!fb) return;
+  fb.textContent = msg || '';
+  fb.className = 'fb' + (type ? ' ' + type : '');
+}
+function renderTrail() {
+  trail.hidden = false;
+  [...trail.children].forEach((li, i) => {
+    li.classList.toggle('done', i < R.step);
+    li.classList.toggle('on', i === R.step);
+    li.setAttribute('aria-current', i === R.step ? 'step' : 'false');
+  });
+}
+
+/* ---------- Pantalla de inicio ---------- */
+function renderStart() {
+  stageToken++; blow = null; trail.hidden = true;
+  const mill = h('div', { class: 'mill' }); mill.innerHTML = pinwheel();
+  mill.querySelector('.blades').setAttribute('transform', 'rotate(12 100 100)');
+  stage.className = 'stage';
+  stage.replaceChildren(
+    mill,
+    h('h1', { class: 'start-title' }, 'Sopla y Descubre'),
+    h('p', { class: 'help' }, 'Cuenta, suma y resta con animales. Después sopla para descubrir un animal muy raro.'),
+    h('button', { class: 'go', type: 'button', onclick: async () => { ac(); await Mic.start(); newRound(); } }, 'Empezar'),
+    h('p', { class: 'note' },
+      h('b', null, 'Para papá o mamá: '),
+      'al empezar, el navegador pedirá permiso para usar el micrófono. El sonido solo se analiza en el momento para notar el soplido: no se graba ni se envía a ningún sitio. Si el micrófono no funciona, hay un botón de mantener pulsado. En Ajustes puede cambiar la sensibilidad, los números y los sonidos.')
+  );
+}
+
+/* ---------- Rondas ---------- */
+function newRound() {
+  const pool = ANIMALS.filter(a => !album.includes(a.id));
+  const animal = pick(pool.length ? pool : ANIMALS);
+  const all = ['count', 'more', 'less', 'sum', 'sub'];
+  const a = pick(all), b = pick(all.filter(k => k !== a));
+  R = { animal, step: 0, kinds: [a, b], wrong: 0 };
+  fetchPhoto(animal);
+  renderStep();
+}
+function renderStep() {
+  stopBlow();
+  renderTrail();
+  R.wrong = 0;
+  if (R.step < 2) renderActivity(R.kinds[R.step]); else renderBlow();
+  window.scrollTo({ top: 0 });
+}
+
+/* ---------- Generadores de preguntas ---------- */
+function opts(ans, min, max) {
+  const near = [-2, -1, 1, 2, 3, -3].map(d => ans + d).filter(v => v >= min && v <= max).sort(() => Math.random() - 0.5);
+  const out = [ans];
+  for (const v of near) if (out.length < 3 && !out.includes(v)) out.push(v);
+  for (let k = 1; out.length < 3 && k < 40; k++) { const v = ans + k; if (v >= min && v <= max && !out.includes(v)) out.push(v); }
+  return out.sort((x, y) => x - y);
+}
+function twoEmo() { const a = pick(EMO); let b; do { b = pick(EMO); } while (b === a); return [a, b]; }
+function emSize(total) { return total <= 6 ? 'clamp(2.6rem,10vw,3.8rem)' : total <= 12 ? 'clamp(2.1rem,8vw,3rem)' : 'clamp(1.7rem,6vw,2.3rem)'; }
+
+function setBadge(el, num) {
+  const old = el.querySelector('.n'); if (old) old.remove();
+  if (num) el.append(h('span', { class: 'n' }, num));
+}
+function group(n, emo, o = {}) {
+  const g = h('div', { class: 'group' });
+  g.style.setProperty('--em', o.size || emSize(n));
+  for (let i = 0; i < n; i++) {
+    const el = o.tap
+      ? h('button', { class: 'animal', type: 'button', 'aria-label': 'Animal ' + (i + 1) })
+      : h('span', { class: 'animal' });
+    el.append(h('span', { 'aria-hidden': 'true' }, emo));
+    if (o.leaving && i >= n - o.leaving) el.classList.add('leaving');
+    g.append(el);
+  }
+  if (o.tap) {
+    g.dataset.c = '0';
+    g.addEventListener('click', e => {
+      const b = e.target.closest('.animal');
+      if (!b || !g.contains(b)) return;
+      let c = +g.dataset.c;
+      if (c >= g.children.length) { [...g.children].forEach(x => setBadge(x, 0)); c = 0; }
+      if (b.querySelector('.n')) return;
+      g.dataset.c = String(++c);
+      setBadge(b, c);
+    });
+  }
+  return g;
+}
+async function autoNumber(els, token, groupEl) {
+  els.forEach(x => setBadge(x, 0));
+  let i = 0;
+  for (const el of els) {
+    if (token !== stageToken) return;
+    setBadge(el, ++i);
+    await sleep(S.calm ? 320 : 480);
+  }
+  if (groupEl && groupEl.dataset) groupEl.dataset.c = String(els.length);
+}
+function choicesEl(values, onPick) {
+  const btns = values.map(v => h('button', { class: 'choice', type: 'button', onclick: e => onPick(v, e.currentTarget) }, v));
+  const el = h('div', { class: 'choices' }, btns);
+  return {
+    el,
+    guide(ans) { btns.forEach(b => { if (+b.textContent === ans) b.classList.add('guide'); }); },
+    right(ans) { btns.forEach(b => { if (+b.textContent === ans) { b.classList.add('right'); b.classList.remove('guide'); } }); }
+  };
+}
+
+/* ---------- Pantalla de actividad ---------- */
+function frame(title, help, say, content) {
+  stageToken++;
+  fb = h('p', { class: 'fb', role: 'status', 'aria-live': 'polite' });
+  nextBox = h('div', { class: 'next' });
+  stage.className = 'stage';
+  stage.replaceChildren(
+    h('div', { class: 'q-row' }, h('h1', { class: 'q' }, title), speakBtn(say || title, 'Escuchar la pregunta')),
+    help ? h('p', { class: 'help' }, help) : null,
+    ...content, fb, nextBox
+  );
+}
+function win(msg, label) {
+  chime('ok');
+  stage.classList.add('locked');
+  setFB(msg, 'good');
+  nextBox.replaceChildren(h('button', { class: 'go', type: 'button', onclick: () => { R.step++; renderStep(); } }, label || 'Siguiente'));
+}
+
+function renderActivity(kind) {
+  const max = S.max, cap = Math.min(max, 10);
+  const tk = () => stageToken;
+
+  if (kind === 'count') {
+    const n = ri(1, cap), e = pick(EMO);
+    const g = group(n, e, { tap: true });
+    let ch;
+    ch = choicesEl(opts(n, 1, max), (v, btn) => {
+      if (v === n) { btn.classList.add('right'); win('¡Sí! Hay ' + n + '.'); return; }
+      R.wrong++; btn.classList.add('is-hint'); btn.disabled = true;
+      setFB('Casi. Vamos a contar juntos.', 'hint');
+      autoNumber([...g.children], tk(), g);
+      if (R.wrong >= 2) ch.guide(n);
+    });
+    frame('¿Cuántos hay?', 'Toca cada animal para contarlo.', '¿Cuántos animales hay?', [g, ch.el]);
+    return;
+  }
+
+  if (kind === 'more' || kind === 'less') {
+    const a = ri(1, cap); let b;
+    do { b = clamp(a + pick([-3, -2, -1, 1, 2, 3]), 1, cap); } while (b === a);
+    const counts = [a, b], emos = twoEmo();
+    const ans = kind === 'more' ? (a > b ? 0 : 1) : (a < b ? 0 : 1);
+    const word = kind === 'more' ? 'más' : 'menos';
+    const cnts = [h('div', { class: 'cnt' }), h('div', { class: 'cnt' })];
+    const reveal = () => cnts.forEach((c, i) => { c.textContent = counts[i]; });
+    const picks = [0, 1].map(i => h('button', {
+      class: 'pick', type: 'button', 'aria-label': 'Grupo ' + (i + 1),
+      onclick: e => {
+        const btn = e.currentTarget;
+        reveal();
+        if (i === ans) { win('¡Muy bien! ' + counts[0] + ' y ' + counts[1] + '. Aquí hay ' + word + '.'); return; }
+        R.wrong++; btn.classList.add('is-hint'); btn.disabled = true;
+        setFB('Vamos a contar: ' + counts[0] + ' y ' + counts[1] + '. ¿Dónde hay ' + word + '?', 'hint');
+      }
+    }, group(counts[i], emos[i], { size: emSize(Math.max(a, b) * 2) }), cnts[i]));
+    frame('¿Dónde hay ' + word + '?', 'Toca el grupo que tiene ' + word + ' animales.', '¿Dónde hay ' + word + ' animales?', [h('div', { class: 'pair' }, picks)]);
+    return;
+  }
+
+  if (kind === 'sum') {
+    const total = ri(2, max);
+    const a = ri(Math.max(1, total - 10), Math.min(10, total - 1)), b = total - a, e = pick(EMO);
+    const size = emSize(total);
+    const ga = group(a, e, { size }), gb = group(b, e, { size });
+    const res = h('span', { class: 'res' }, '?');
+    const eq = h('div', { class: 'eq' }, h('div', { class: 'box' }, ga), h('span', { class: 'op', 'aria-label': 'más' }, '+'), h('div', { class: 'box' }, gb), h('span', { class: 'op' }, '='), res);
+    let ch;
+    ch = choicesEl(opts(total, 2, Math.max(max, total + 1)), (v, btn) => {
+      if (v === total) { btn.classList.add('right'); res.textContent = total; win('¡Muy bien! ' + a + ' + ' + b + ' = ' + total); return; }
+      R.wrong++; btn.classList.add('is-hint'); btn.disabled = true;
+      setFB('Casi. Contamos todos juntos.', 'hint');
+      autoNumber([...ga.children, ...gb.children], tk());
+      if (R.wrong >= 2) ch.guide(total);
+    });
+    frame('¿Cuántos hay en total?', 'Junta los dos grupos.', a + ' más ' + b + '. ¿Cuántos hay en total?', [eq, ch.el]);
+    return;
+  }
+
+  // sub
+  const t = ri(2, Math.min(max, 12)), r = ri(1, t - 1), left = t - r, e = pick(EMO);
+  const g = group(t, e, { leaving: r });
+  const res = h('span', { class: 'res' }, '?');
+  const eq = h('div', { class: 'eq' }, h('div', { class: 'box' }, g), h('span', { class: 'op' }, '='), res);
+  let ch;
+  ch = choicesEl(opts(left, 1, Math.max(Math.min(max, 12), left + 1)), (v, btn) => {
+    if (v === left) { btn.classList.add('right'); res.textContent = left; win('¡Muy bien! ' + t + ' − ' + r + ' = ' + left); return; }
+    R.wrong++; btn.classList.add('is-hint'); btn.disabled = true;
+    setFB('Casi. Contamos los que se quedan.', 'hint');
+    autoNumber([...g.children].filter(x => !x.classList.contains('leaving')), tk());
+    if (R.wrong >= 2) ch.guide(left);
+  });
+  frame('¿Cuántos quedan?', 'Había ' + t + '. Se van ' + r + ' (los de color gris).', 'Había ' + t + ' animales. Se van ' + r + '. ¿Cuántos quedan?', [eq, ch.el]);
+}
+
+/* ---------- Pantalla de soplar ---------- */
+function renderBlow() {
+  stageToken++;
+  const mill = h('div', { class: 'mill' }); mill.innerHTML = pinwheel();
+  const fill = h('i');
+  const meter = h('div', { class: 'meter', role: 'progressbar', 'aria-label': 'Soplido', 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': '0' }, fill);
+  const status = h('p', { class: 'blow-status', role: 'status', 'aria-live': 'polite' }, 'Sopla hacia el micrófono.');
+  const holdBtn = h('button', { class: 'hold', type: 'button' }, 'Sin micrófono: mantén pulsado aquí');
+  const down = e => { e.preventDefault(); holding = true; holdBtn.classList.add('down'); };
+  const up = () => { holding = false; holdBtn.classList.remove('down'); };
+  holdBtn.addEventListener('pointerdown', down);
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => holdBtn.addEventListener(ev, up));
+  holdBtn.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); down(e); } });
+  holdBtn.addEventListener('keyup', up);
+
+  const airFill = h('i');
+  const air = h('div', { class: 'airwrap', 'aria-hidden': 'true' }, h('div', { class: 'meter' }, airFill));
+  const airLabel = h('p', { class: 'air-label', 'aria-hidden': 'true' }, 'Tu aire: pasa la raya para mover el molinillo');
+  const micBox = h('div', { class: 'help' });
+  const micMsg = () => {
+    micBox.replaceChildren();
+    if (Mic.state === 'on') return;
+    micBox.append(micMessage() + ' ', h('button', { class: 'soft', type: 'button', onclick: async () => { micBox.textContent = 'Probando el micrófono…'; await Mic.start(); micMsg(); } }, 'Probar de nuevo'));
+  };
+  micMsg();
+
+  stage.className = 'stage';
+  stage.replaceChildren(
+    h('div', { class: 'q-row' }, h('h1', { class: 'q' }, 'Sopla para descubrir un animal'), speakBtn('Sopla hacia el micrófono para descubrir un animal.', 'Escuchar')),
+    mill, meter, status, air, airLabel, micBox, holdBtn
+  );
+  blow = { p: 0, w: 0, a: 0, blades: mill.querySelector('.blades'), fill, airFill, meter, status, lastActive: null, done: false };
+}
+function stopBlow() { blow = null; holding = false; }
+
+function blowStep(dt, det) {
+  if (!blow || blow.done) return;
+  const active = det.blowing || holding;
+  blow.p = clamp(blow.p + (active ? dt / S.dur : -dt * 0.1), 0, 1);
+  const top = (S.calm ? 0.5 : 1) * (holding ? 560 : 260 + det.level * 700);
+  const target = active ? top : 0;
+  blow.w += (target - blow.w) * Math.min(1, dt * (active ? 4 : 1.6));
+  blow.a = (blow.a + blow.w * dt) % 360;
+  blow.blades.setAttribute('transform', 'rotate(' + blow.a.toFixed(1) + ' 100 100)');
+  const pct = Math.round(blow.p * 100);
+  blow.fill.style.width = pct + '%';
+  blow.meter.setAttribute('aria-valuenow', String(pct));
+  if (blow.lastActive !== active) {
+    blow.lastActive = active;
+    blow.status.textContent = active ? 'Te escucho. ¡Sigue!' : 'Sopla hacia el micrófono.';
+  }
+  if (blow.p >= 1) finishBlow();
+}
+function finishBlow() {
+  blow.done = true; holding = false;
+  const a = R.animal;
+  const isNew = !album.includes(a.id);
+  if (isNew) { album.push(a.id); LS.set('syd.album', album); }
+  chime('win');
+  renderAlbum();
+  const mill = h('div', { class: 'mill' }); mill.innerHTML = pinwheel();
+  mill.querySelector('.blades').setAttribute('transform', 'rotate(20 100 100)');
+  stage.replaceChildren(mill, h('h1', { class: 'q' }, '¡Lo conseguiste!'));
+  openSheet(cardNode(a, isNew ? 'new' : 'again'), newRound);
+}
+
+/* ---------- Ficha de animal ---------- */
+function cardNode(a, mode) {
+  const photo = h('div', { class: 'photo' });
+  photoInto(photo, a, false);
+  const credit = h('p', { class: 'credit' }, 'Foto: Wikipedia, con licencia libre.');
+  fetchPhoto(a).then(i => { if (i && i.page) credit.append(' ', h('a', { href: i.page, target: '_blank', rel: 'noopener' }, 'Ver en Wikipedia')); });
+  const readAll = a.name + '. Vive en: ' + a.where + '. ' + a.facts.join(' ');
+  const kicker = mode === 'new' ? '¡Animal nuevo!' : mode === 'again' ? 'Otra vez este animal' : 'Ficha del animal';
+  return h('div', { class: 'sheet-card' },
+    h('p', { class: 'kicker' }, kicker),
+    photo,
+    h('div', null, h('h2', { class: 'card-name' }, a.name), h('p', { class: 'sci' }, a.sci)),
+    h('p', { class: 'where' }, 'Vive en: ' + a.where),
+    h('h3', { class: 'card-sub' }, '¿Sabías que…?'),
+    h('ul', { class: 'facts' }, a.facts.map(f => h('li', null, f))),
+    S.speech && 'speechSynthesis' in window ? h('div', { class: 'row-actions' }, h('button', { class: 'soft', type: 'button', onclick: () => speak(readAll) }, 'Escuchar la ficha')) : null,
+    credit,
+    h('div', { class: 'row-actions' }, h('button', { class: 'go', type: 'button', 'data-close': '1' }, mode ? 'Seguir' : 'Cerrar'))
+  );
+}
+
+/* ---------- Ventanas (ficha y ajustes) ---------- */
+let sheetEl = null, sheetCb = null, lastFocus = null;
+function openSheet(node, onClose) {
+  closeSheet(true);
+  lastFocus = document.activeElement;
+  sheetCb = onClose || null;
+  sheetEl = h('div', { class: 'sheet', role: 'dialog', 'aria-modal': 'true' }, node);
+  sheetEl.addEventListener('click', e => { if (e.target.closest('[data-close]')) closeSheet(); });
+  document.body.append(sheetEl);
+  document.body.style.overflow = 'hidden';
+  sheetOpen = true;
+  const f = sheetEl.querySelector('[data-close]'); if (f) f.focus({ preventScroll: true });
+  sheetEl.scrollTop = 0;
+}
+function closeSheet(silent) {
+  if (!sheetEl) return;
+  sheetEl.remove(); sheetEl = null; sheetOpen = false; settingsUI = null;
+  document.body.style.overflow = '';
+  try { speechSynthesis.cancel(); } catch (e) {}
+  const cb = sheetCb; sheetCb = null;
+  if (lastFocus && lastFocus.focus && document.contains(lastFocus)) lastFocus.focus({ preventScroll: true });
+  if (!silent && cb) cb();
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && sheetEl) closeSheet(); });
+
+/* ---------- Álbum ---------- */
+function renderAlbum() {
+  const tiles = ANIMALS.map(a => {
+    if (!album.includes(a.id)) {
+      return h('div', { class: 'tile locked-tile', 'aria-label': 'Animal por descubrir' }, h('div', { class: 'th' }, '?'), h('span', { class: 'nm' }, 'Por descubrir'));
+    }
+    const th = h('div', { class: 'th' });
+    photoInto(th, a, true);
+    return h('button', { class: 'tile', type: 'button', onclick: () => openSheet(cardNode(a, null)) }, th, h('span', { class: 'nm' }, a.name));
+  });
+  $('#album').replaceChildren(
+    h('div', { class: 'album-head' }, h('h2', { id: 'albumH' }, 'Mis animales'), h('span', null, album.length + ' de ' + ANIMALS.length)),
+    h('div', { class: 'tiles' }, tiles)
+  );
+}
+
+/* ---------- Calibrar el soplido con el niño ---------- */
+function computeCal(quiet, blow) {
+  const med = a => { const s = a.slice().sort((x, y) => x - y); return s.length ? s[Math.floor(s.length / 2)] : 0; };
+  const noise = med(quiet.map(x => x[0]));
+  const loud = blow.filter(x => x[0] > Math.max(noise * 1.8, 0.0025));
+  if (loud.length < 15) return null; // menos de unos 0,25 s de soplido claro
+  const p = med(loud.map(x => x[0]));
+  if (p < noise * 2.5) return null;  // el soplido apenas se distingue del ruido de la sala
+  const on = Math.min(Math.max(noise * 2.2, p * 0.4, 0.0025), p * 0.8);
+  const flat = clamp(med(loud.map(x => x[1])) * 0.4, 0.008, 0.05);
+  return { on: +on.toFixed(4), flat: +flat.toFixed(3) };
+}
+async function openCalibrate() {
+  const body = h('div', { class: 'sheet-card' });
+  openSheet(body, openSettings);
+  const mine = sheetEl;
+  let timer = null;
+  const stop = () => { if (timer) { clearInterval(timer); timer = null; } Det.rec = null; };
+  const show = (title, text, extra) => body.replaceChildren(
+    h('h2', { class: 'set-title' }, title),
+    h('p', { class: 'help', style: 'text-align:left;max-width:none' }, text),
+    ...(extra || []));
+  const btn = (cls, label, fn, close) => h('button', { class: cls, type: 'button', onclick: fn, 'data-close': close ? '1' : null }, label);
+  const intro = () => show('Calibrar el soplido',
+    'Mide cómo suena el soplido de tu hijo, para que el juego lo detecte aunque sople flojo. Ponle el móvil a la distancia a la que va a jugar. Primero habrá 2 segundos de silencio y después 4 segundos para soplar.',
+    [h('div', { class: 'row-actions' }, btn('go', 'Empezar', run), btn('soft', 'Volver', null, true))]);
+  const fail = (msg) => show('No se pudo calibrar', msg, [h('div', { class: 'row-actions' }, btn('go', 'Repetir', run), btn('soft', 'Volver', null, true))]);
+  async function run() {
+    stop();
+    if (Mic.state !== 'on') {
+      show('Calibrar el soplido', 'Probando el micrófono…');
+      await Mic.start();
+      if (sheetEl !== mine) return;
+      if (Mic.state !== 'on') { fail(micMessage()); return; }
+    }
+    const fill = h('i'), meter = h('div', { class: 'meter', 'aria-hidden': 'true' }, fill);
+    const big = h('p', { class: 'start-title', style: 'font-size:2rem;text-align:left' });
+    show('Calibrar el soplido', '', [big, meter]);
+    let quiet = [], blow = [], t = 0, phase = 'quiet';
+    Det.rec = [];
+    timer = setInterval(() => {
+      if (sheetEl !== mine) { stop(); return; }
+      t += 0.1;
+      fill.style.width = Math.round(Det.level * 100) + '%';
+      if (phase === 'quiet') {
+        big.textContent = 'Silencio, por favor…';
+        if (t >= 2) { quiet = Det.rec || []; Det.rec = []; phase = 'blow'; t = 0; }
+      } else {
+        big.textContent = '¡Ahora sopla! ' + Math.max(0, Math.ceil(4.5 - t)) + ' s';
+        if (t >= 4.5) {
+          blow = Det.rec || []; stop();
+          const cal = computeCal(quiet, blow);
+          if (!cal) { fail('No se oyó un soplido claro frente al ruido de la sala. Acerca el micrófono, sopla más largo o repite en un sitio más tranquilo.'); return; }
+          S.cal = cal; saveS();
+          show('Calibrado', 'Listo. El juego detectará soplidos como el de esta prueba. Si más adelante quieres volver al ajuste automático, pulsa «Quitar calibración» en los ajustes.',
+            [h('div', { class: 'row-actions' }, btn('go', 'Hecho', null, true), btn('soft', 'Repetir', run))]);
+        }
+      }
+    }, 100);
+  }
+  intro();
+}
+
+/* ---------- Ajustes para adultos ---------- */
+let settingsUI = null;
+function openSettings() {
+  const meterFill = h('i');
+  const meter = h('div', { class: 'meter', 'aria-hidden': 'true' }, meterFill);
+  const chip = h('span', { class: 'chip' }, '—');
+  const micMsg = h('p', { class: 'help', style: 'text-align:left;max-width:none' });
+  const micText = () => { micMsg.textContent = Mic.state === 'on' ? 'Micrófono activo. Sopla ahora para probar la sensibilidad.' : micMessage(); };
+  micText();
+
+  const seg = (key, items) => {
+    const box = h('div', { class: 'seg', role: 'group' });
+    const draw = () => box.replaceChildren(...items.map(([v, l]) => h('button', {
+      type: 'button', 'aria-pressed': String(S[key] === v),
+      onclick: () => { S[key] = v; saveS(); draw(); }
+    }, l)));
+    draw(); return box;
+  };
+  const sw = (key, label, small) => {
+    const id = 'sw-' + key;
+    const inp = h('input', { type: 'checkbox', role: 'switch', id });
+    inp.checked = !!S[key];
+    inp.addEventListener('change', () => { S[key] = inp.checked; saveS(); });
+    return h('div', { class: 'row' }, h('label', { for: id }, label, small ? h('small', null, small) : null), inp);
+  };
+  const range = h('input', { type: 'range', id: 'sens', min: '1', max: '10', step: '1', 'aria-label': 'Sensibilidad del soplido' });
+  range.value = S.sens;
+  range.addEventListener('input', () => { S.sens = +range.value; saveS(); });
+
+  let confirmed = false;
+  const wipe = h('button', { class: 'danger', type: 'button' }, 'Borrar álbum');
+  wipe.addEventListener('click', () => {
+    if (!confirmed) { confirmed = true; wipe.textContent = 'Pulsa otra vez para borrar'; return; }
+    album = []; LS.set('syd.album', album); renderAlbum(); confirmed = false; wipe.textContent = 'Álbum borrado';
+  });
+
+  const node = h('div', { class: 'sheet-card' },
+    h('h2', { class: 'set-title' }, 'Ajustes para adultos'),
+    h('div', { class: 'set-group' },
+      h('h3', null, 'Micrófono'),
+      micMsg,
+      h('div', { class: 'row-actions' }, h('button', { class: 'soft', type: 'button', onclick: async () => { micMsg.textContent = 'Probando el micrófono…'; await Mic.start(); micText(); } }, 'Activar o probar micrófono'),
+        h('button', { class: 'soft', type: 'button', onclick: openCalibrate }, S.cal ? 'Calibrar de nuevo' : 'Calibrar con el niño'),
+        S.cal ? h('button', { class: 'danger', type: 'button', onclick: () => { delete S.cal; saveS(); openSettings(); } }, 'Quitar calibración') : null),
+      h('div', { class: 'row' }, h('span', { class: 'lbl' }, 'Nivel de soplido'), chip),
+      meter,
+      h('div', { class: 'row' }, h('label', { for: 'sens' }, 'Sensibilidad', h('small', null, 'Más alta: detecta soplidos más suaves. No se usa si has calibrado.')), range),
+      sw('voiceFilter', 'Distinguir soplido de voz', 'Si el soplido no se detecta, prueba a desactivarlo.'),
+      h('div', { class: 'row' }, h('span', { class: 'lbl' }, 'Tiempo de soplido', h('small', null, 'Cuánto debe soplar en total.')), seg('dur', [[1.5, 'Corto'], [3, 'Normal'], [5, 'Largo']]))
+    ),
+    h('div', { class: 'set-group' },
+      h('h3', null, 'Matemáticas'),
+      h('div', { class: 'row' }, h('span', { class: 'lbl' }, 'Números hasta'), seg('max', [[5, '5'], [10, '10'], [20, '20']]))
+    ),
+    h('div', { class: 'set-group' },
+      h('h3', null, 'Sensaciones'),
+      sw('sounds', 'Sonidos suaves', 'Una campanita corta al acertar.'),
+      sw('speech', 'Botones de voz', 'Leen en voz alta solo cuando se pulsan.'),
+      sw('calm', 'Menos movimiento', 'Quita animaciones y gira el molinillo más despacio.')
+    ),
+    h('div', { class: 'row-actions' }, wipe, h('button', { class: 'go', type: 'button', 'data-close': '1' }, 'Listo'))
+  );
+  openSheet(node, null);
+  settingsUI = { meterFill, chip };
+}
+$('#openSettings').addEventListener('click', openSettings);
+
+/* ---------- Bucle principal ---------- */
+let last = 0;
+function loop(ts) {
+  const dt = Math.min(0.1, last ? (ts - last) / 1000 : 0.016);
+  last = ts;
+  const det = Det.update(dt);
+  if (settingsUI) {
+    settingsUI.meterFill.style.width = Math.round(det.level * 100) + '%';
+    settingsUI.chip.textContent = Mic.state === 'on' ? (det.blowing ? 'Soplando' : 'Silencio') : '—';
+    settingsUI.chip.classList.toggle('on', !!det.blowing);
+  }
+  if (blow) blow.airFill.style.width = Math.round(det.level * 100) + '%';
+  if (blow && !sheetOpen) blowStep(dt, det);
+  requestAnimationFrame(loop);
+}
+window.addEventListener('keydown', e => {
+  if (blow && !sheetOpen && e.code === 'Space' && !(e.target && e.target.closest && e.target.closest('button'))) { e.preventDefault(); holding = true; }
+});
+window.addEventListener('keyup', e => { if (e.code === 'Space') holding = false; });
+window.addEventListener('pagehide', () => { try { Mic.stream && Mic.stream.getTracks().forEach(t => t.stop()); } catch (e) {} });
+
+/* ---------- Arranque ---------- */
+$('#brandMark').innerHTML = pinwheel();
+$('#brandMark').querySelector('.blades').setAttribute('transform', 'rotate(12 100 100)');
+saveS();
+renderAlbum();
+renderStart();
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
