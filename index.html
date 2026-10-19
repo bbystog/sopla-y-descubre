@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Juegos de animales</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Nunito:wght@600;800&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#13353d;--mist:#e8f2f0;--sea:#1d7f86;--sun:#f2b84b;--leaf:#4f9d69;--coral:#e56f56;--soft:#5b7a80}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;min-height:100vh;color:var(--ink);font-family:'Nunito',system-ui,sans-serif;font-weight:700;background:linear-gradient(180deg,#f3faf8,#e1efec) fixed}
+main{max-width:640px;margin:0 auto;padding:28px 16px 48px}
+h1{font-family:'Fredoka',sans-serif;font-weight:600;font-size:2.2rem;margin:0;text-align:center}
+.sub{text-align:center;color:var(--soft);margin:6px 0 24px}
+.owl{text-align:center;font-size:70px;line-height:1}
+.list{display:grid;gap:14px}
+a.game{display:flex;gap:16px;align-items:center;text-decoration:none;color:inherit;background:#fff;border-radius:22px;padding:16px;box-shadow:0 6px 20px rgba(19,53,61,.09);border:2px solid #fff;transition:transform .1s}
+a.game:active{transform:scale(.98)}
+.ic{flex:none;width:72px;height:72px;border-radius:20px;display:grid;place-items:center;font-size:40px}
+.tx{min-width:0}
+.tx b{font-family:'Fredoka',sans-serif;font-weight:600;font-size:1.3rem;display:block}
+.tx span{color:var(--soft);font-size:.95rem;font-weight:600;display:block}
+.tx em{font-style:normal;display:inline-block;margin-top:6px;background:var(--mist);color:var(--sea);border-radius:99px;padding:2px 10px;font-size:.82rem}
+.go{margin-left:auto;font-size:1.6rem;color:var(--sea)}
+</style>
+</head>
+<body>
+<main>
+ <div class="owl">🦉</div>
+ <h1>Juegos de animales</h1>
+ <p class="sub">Elige un juego</p>
+ <div class="list" id="list"></div>
+</main>
+<script>
+/* Para añadir un juego nuevo: copia una línea de esta lista, cambia los datos y sube el archivo del juego junto a este.
+   progress: nombre de la clave de localStorage con la etapa actual y total de etapas (opcional). */
+const GAMES=[
+ {file:'sopla-y-descubre.html',title:'Sopla y descubre',desc:'Mates con animales y soplidos para desbloquear fichas.',icon:'🌬️',color:'#d7ecf0'},
+ {file:'sopla-la-bola.html',title:'Sopla la bola',desc:'Soplidos largos para llevar la bola hasta el agujero.',icon:'⚽',color:'#fbe9c3',progress:'slb.n',total:50},
+ {file:'lee-alto-y-claro.html',title:'Lee alto y claro',desc:'Lee en voz alta, desbloquea animales y avanza de etapa.',icon:'📖',color:'#d9efdf',progress:'lee.n',total:303},
+ {file:'metamorfosis.html',title:'Metamorfosis',desc:'Mira cómo cambian la mariposa, la libélula y la rana.',icon:'🦋',color:'#f4dff0'}
+];
+const list=document.getElementById('list');
+GAMES.forEach(g=>{
+  let badge='';
+  if(g.progress){try{const n=JSON.parse(localStorage.getItem(g.progress)||'0');if(n>0)badge=`<em>${n} de ${g.total}</em>`}catch(e){}}
+  const a=document.createElement('a');a.className='game';a.href=g.file;
+  a.innerHTML=`<div class="ic" style="background:${g.color}">${g.icon}</div><div class="tx"><b>${g.title}</b><span>${g.desc}</span>${badge}</div><div class="go">›</div>`;
+  list.appendChild(a);
+});
+</script>
+</body>
+</html>
